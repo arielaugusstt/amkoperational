@@ -219,3 +219,4 @@ class AdminController extends Controller
         return response()->json(['settings' => $settings]);
     }
 }
+

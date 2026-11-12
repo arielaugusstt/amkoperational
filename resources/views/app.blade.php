@@ -24,3 +24,4 @@
     <div id="root" class="min-h-full"></div>
 </body>
 </html>
+

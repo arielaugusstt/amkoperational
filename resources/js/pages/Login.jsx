@@ -53,7 +53,7 @@ export default function Login({ onLoginSuccess }) {
                     </div>
                 </div>
                 <h2 className="mt-4 text-center text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-                    AIR MATA KUCING <span className="text-amber-600">& AMKopi</span>
+                    AIR MATA KUCING
                 </h2>
                 <p className="mt-1 text-center text-xs sm:text-sm font-semibold text-slate-600">
                     Sistem Operasional, Inventori & Reverse Analytic
@@ -150,3 +150,4 @@ export default function Login({ onLoginSuccess }) {
         </div>
     );
 }
+

@@ -164,3 +164,4 @@ class WhatsAppReportService
             implode("\n", $footer);
     }
 }
+

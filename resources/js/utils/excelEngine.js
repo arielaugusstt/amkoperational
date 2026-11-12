@@ -204,3 +204,4 @@ export function exportComprehensiveReport(summary, standsProgress, tanggal) {
 
     XLSX.writeFile(wb, `Laporan_Operasional_AMK_${tanggal}.xlsx`);
 }
+

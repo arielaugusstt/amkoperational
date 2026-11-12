@@ -590,3 +590,4 @@ export default function Menu2FormPenjualan({
         </div>
     );
 }
+

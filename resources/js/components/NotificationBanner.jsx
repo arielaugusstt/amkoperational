@@ -35,3 +35,4 @@ export default function NotificationBanner({ message, type = 'info', onDismiss }
         </div>
     );
 }
+

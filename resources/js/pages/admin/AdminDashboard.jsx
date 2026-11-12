@@ -284,3 +284,4 @@ export default function AdminDashboard({ tanggal, setTanggal, onNavigate }) {
         </div>
     );
 }
+

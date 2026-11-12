@@ -55,3 +55,4 @@ gh issue create --repo "$REPO" \
   --body "Generator Teks WA 1-Click Copy (Blok 1, Blok 2, Blok 3 + Rekap Total AMK/Kurma/AMKopi), halaman Master Data Dinamis (UI Tabel + Download/Upload 4 Template .xlsx via SheetJS), Export Laporan Multi-Sheet .xlsx, Approval Stock Opname, Edit/Revisi Laporan SPG, dan Google Sheets Webhook."
 
 echo "Semua issue berhasil dibuat di GitHub!"
+

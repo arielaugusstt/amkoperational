@@ -61,3 +61,4 @@ export function useLocalStoragePersistence(menuKey, standId, tanggal, initialVal
         clearDraft,
     };
 }
+
