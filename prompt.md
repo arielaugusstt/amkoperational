@@ -315,3 +315,11 @@ TGL [D/M]
  Total Kurma : [Total Nominal Kurma Seluruh Stand], Cb [Total Cup Kurma]
  Total AMKopi : [Total Nominal AMKopi Seluruh Stand], Ck [Total Cup AMKopi]
         - Input rekap laporan harian dengan fitur: 
+
+
+
+
+
+
+
+        

@@ -218,5 +218,77 @@ class AdminController extends Controller
         $settings = AppSetting::pluck('setting_value', 'setting_key');
         return response()->json(['settings' => $settings]);
     }
+
+    public function deleteOperationalData(Request $request)
+    {
+        $scope = $request->input('scope', 'date'); // 'date', 'stand', 'all'
+        $tanggal = $request->input('tanggal', date('Y-m-d'));
+        $standId = $request->input('stand_id');
+
+        $deletedM1 = 0;
+        $deletedM2 = 0;
+        $deletedM3 = 0;
+        $deletedOpname = 0;
+
+        if ($scope === 'all') {
+            $deletedM1 = DailyReportMenu1::count();
+            $deletedM2 = DailySaleMenu2::count();
+            $deletedM3 = DailyInventoryMenu3::count();
+            $deletedOpname = StockOpnameRequest::count();
+
+            DailySaleMenu2::query()->delete();
+            DailyInventoryMenu3::query()->delete();
+            DailyReportMenu1::query()->delete();
+            StockOpnameRequest::query()->delete();
+
+            $msg = "Seluruh data transaksi operasional ({$deletedM1} Menu 1, {$deletedM2} Menu 2, {$deletedM3} Menu 3, {$deletedOpname} Opname) berhasil dihapus.";
+        } elseif ($scope === 'stand' && $standId) {
+            $m1Q = DailyReportMenu1::where('stand_id', $standId)->where('tanggal', $tanggal);
+            $m2Q = DailySaleMenu2::where('stand_id', $standId)->where('tanggal', $tanggal);
+            $m3Q = DailyInventoryMenu3::where('stand_id', $standId)->where('tanggal', $tanggal);
+            $opQ = StockOpnameRequest::where('stand_id', $standId)->whereDate('created_at', $tanggal);
+
+            $deletedM1 = $m1Q->count();
+            $deletedM2 = $m2Q->count();
+            $deletedM3 = $m3Q->count();
+            $deletedOpname = $opQ->count();
+
+            $m2Q->delete();
+            $m3Q->delete();
+            $m1Q->delete();
+            $opQ->delete();
+
+            $msg = "Data stand pada tanggal {$tanggal} berhasil dihapus ({$deletedM1} Menu 1, {$deletedM2} Menu 2, {$deletedM3} Menu 3).";
+        } else {
+            // scope === 'date'
+            $m1Q = DailyReportMenu1::where('tanggal', $tanggal);
+            $m2Q = DailySaleMenu2::where('tanggal', $tanggal);
+            $m3Q = DailyInventoryMenu3::where('tanggal', $tanggal);
+            $opQ = StockOpnameRequest::whereDate('created_at', $tanggal);
+
+            $deletedM1 = $m1Q->count();
+            $deletedM2 = $m2Q->count();
+            $deletedM3 = $m3Q->count();
+            $deletedOpname = $opQ->count();
+
+            $m2Q->delete();
+            $m3Q->delete();
+            $m1Q->delete();
+            $opQ->delete();
+
+            $msg = "Seluruh data laporan pada tanggal {$tanggal} berhasil dihapus ({$deletedM1} Menu 1, {$deletedM2} Menu 2, {$deletedM3} Menu 3).";
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $msg,
+            'details' => [
+                'deleted_m1' => $deletedM1,
+                'deleted_m2' => $deletedM2,
+                'deleted_m3' => $deletedM3,
+                'deleted_opname' => $deletedOpname,
+            ],
+        ]);
+    }
 }
 

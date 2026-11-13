@@ -120,4 +120,37 @@ class AmkOperationalTest extends TestCase
         $revRes->assertStatus(200);
         $revRes->assertJsonStructure(['table1_batch_needs', 'table2_audit_comparison']);
     }
+
+    public function test_delete_operational_data_dev_mode(): void
+    {
+        $admin = User::where('role', 'superadmin')->first();
+        $stand = MasterStand::first();
+
+        // Create a dummy Menu 1 report
+        DailyReportMenu1::create([
+            'stand_id' => $stand->id,
+            'tanggal' => '2026-11-13',
+            'spg_list' => [$admin->id],
+            'nominal_per_kategori' => ['NOM_AMK' => 100000],
+            'total_semua_penjualan' => 100000,
+            'nominal_qris' => 50000,
+            'nominal_tunai' => 50000,
+            'biaya_harian' => [],
+            'total_biaya' => 0,
+            'sisa_setoran_tunai' => 50000,
+            'qty_per_item' => [],
+            'submitted_by' => $admin->id,
+        ]);
+
+        $this->assertEquals(1, DailyReportMenu1::where('tanggal', '2026-11-13')->count());
+
+        // Delete with scope 'date'
+        $delRes = $this->actingAs($admin)->postJson('/api/admin/delete-operational-data', [
+            'scope' => 'date',
+            'tanggal' => '2026-11-13',
+        ]);
+        $delRes->assertStatus(200);
+        $delRes->assertJsonPath('success', true);
+        $this->assertEquals(0, DailyReportMenu1::where('tanggal', '2026-11-13')->count());
+    }
 }
