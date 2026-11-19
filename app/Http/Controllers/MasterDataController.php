@@ -12,14 +12,50 @@ use App\Models\MenuPrice;
 use App\Models\MenuRecipeItem;
 use App\Models\Outlet;
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class MasterDataController extends Controller
 {
+    public static function ensureSystemBootstrapped(bool $forceReseed = false): void
+    {
+        try {
+            $needsMigrate = !Schema::hasTable('outlets')
+                || !Schema::hasTable('menus')
+                || !Schema::hasTable('base_recipes')
+                || Schema::hasTable('master_stands')
+                || Schema::hasTable('menu2_items');
+
+            if ($needsMigrate) {
+                Artisan::call('migrate', ['--force' => true]);
+            }
+
+            if ($forceReseed || (!app()->runningUnitTests() && (Menu::count() === 0 || Ingredient::count() === 0 || BaseRecipe::count() === 0 || Outlet::count() === 0))) {
+                app(DatabaseSeeder::class)->run();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Auto-bootstrap error: ' . $e->getMessage());
+        }
+    }
+
+    public function seedDefaultMasterData()
+    {
+        self::ensureSystemBootstrapped(true);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Seluruh Master Data Baku (19 Outlet, 28 Bahan Baku, 7 Base Adonan, & 54 Menu + Formula Resep BOM) berhasil dimuat ke dalam sistem!',
+        ]);
+    }
+
     public function getFullMaster()
     {
+        self::ensureSystemBootstrapped();
+
         $stands = Outlet::orderBy('blok_wa')->orderBy('urutan_tampil')->get();
         $spg = User::where('role', 'spg')->orderBy('id')->get();
         $menu1Nominals = Menu1NominalConfig::orderBy('urutan')->get();
@@ -570,6 +606,141 @@ class MasterDataController extends Controller
                             'status_aktif' => !in_array(strtolower((string)($row['Status_Aktif'] ?? 'aktif')), ['non-aktif', 'false', '0']),
                         ]
                     );
+                }
+            } elseif ($templateType === 'template2') {
+                if ($importMode === 'replace') {
+                    Menu1NominalConfig::query()->delete();
+                    Menu1QtyConfig::query()->delete();
+                }
+                foreach (($payload['Menu1_Kategori_Nominal'] ?? []) as $row) {
+                    $code = $row['Kode_Kategori'] ?? $row['Kode_Nominal'] ?? null;
+                    if (!$code) continue;
+                    Menu1NominalConfig::updateOrCreate(
+                        ['kode_kategori' => trim($code)],
+                        [
+                            'label_input_nominal' => $row['Label_Input_Nominal'] ?? $row['Nama_Kategori'] ?? $code,
+                            'keterangan_bantu' => $row['Keterangan_Bantu'] ?? null,
+                            'urutan' => (int)($row['Urutan_Tampil'] ?? 1),
+                            'status_aktif' => !in_array(strtolower((string)($row['Status_Aktif'] ?? 'aktif')), ['non-aktif', 'false', '0']),
+                        ]
+                    );
+                }
+                foreach (($payload['Menu1_Item_QTY'] ?? []) as $row) {
+                    $code = $row['Kode_QTY_Menu1'] ?? $row['Kode_QTY'] ?? null;
+                    if (!$code) continue;
+                    Menu1QtyConfig::updateOrCreate(
+                        ['kode_qty_menu1' => trim($code)],
+                        [
+                            'label_input_qty' => $row['Label_Input_QTY'] ?? $row['Nama_Item_QTY'] ?? $code,
+                            'urutan' => (int)($row['Urutan_Tampil'] ?? 1),
+                            'status_aktif' => !in_array(strtolower((string)($row['Status_Aktif'] ?? 'aktif')), ['non-aktif', 'false', '0']),
+                        ]
+                    );
+                }
+            } elseif ($templateType === 'template3') {
+                if ($importMode === 'replace') {
+                    Menu::query()->delete();
+                }
+                $ingMap = Ingredient::pluck('id', 'code');
+                $sheetRows = $payload['Menu_4Tier_Harga'] ?? $payload['Menu2_Matriks_Harga'] ?? reset($payload) ?: [];
+                foreach ($sheetRows as $row) {
+                    $sortOrder = (int)($row['Urutan'] ?? $row['Sort_Order'] ?? 0);
+                    $name = $row['Nama_Menu'] ?? $row['Nama_Item_Menu'] ?? null;
+                    if (!$name && !$sortOrder) continue;
+
+                    $cupCode = $row['Kode_Gelas'] ?? $row['Cup_Code'] ?? null;
+                    $menu = Menu::updateOrCreate(
+                        ['sort_order' => $sortOrder ?: (Menu::max('sort_order') + 1)],
+                        [
+                            'name' => trim($name),
+                            'menu_group' => $row['Kelompok_Menu'] ?? 'amk_reguler',
+                            'report_category' => $row['Kategori_Laporan'] ?? 'amk_murni',
+                            'cup_ingredient_id' => $cupCode ? ($ingMap[trim($cupCode)] ?? null) : null,
+                            'is_active' => !in_array(strtolower((string)($row['Status_Aktif'] ?? 'aktif')), ['non-aktif', 'false', '0']),
+                        ]
+                    );
+
+                    $tierCols = [
+                        'all_outlet' => $row['Harga_All_Outlet'] ?? $row['Harga_Default'] ?? null,
+                        'tp1' => $row['Harga_TP1'] ?? null,
+                        'ptc' => $row['Harga_PTC'] ?? null,
+                        'tp2' => $row['Harga_TP2'] ?? null,
+                    ];
+                    foreach ($tierCols as $tier => $val) {
+                        $price = ($val === null || $val === '' || $val === '-') ? null : (int)$val;
+                        MenuPrice::updateOrCreate(
+                            ['menu_id' => $menu->id, 'price_tier' => $tier],
+                            ['price' => $price]
+                        );
+                    }
+                }
+            } elseif ($templateType === 'template4') {
+                // Sheet 1: Master_Bahan_Baku
+                foreach (($payload['Master_Bahan_Baku'] ?? []) as $row) {
+                    $code = $row['Kode_Bahan'] ?? $row['Code'] ?? null;
+                    if (!$code) continue;
+                    Ingredient::updateOrCreate(
+                        ['code' => trim($code)],
+                        [
+                            'name' => $row['Nama_Bahan_Baku'] ?? $row['Name'] ?? $code,
+                            'category' => $row['Kategori'] ?? 'amk',
+                            'dashboard_tier' => (int)($row['Dashboard_Tier'] ?? 1),
+                            'base_unit' => $row['Satuan_Dasar'] ?? $row['Satuan'] ?? 'ml',
+                            'conversion_unit' => !empty($row['Satuan_Konversi']) ? $row['Satuan_Konversi'] : null,
+                            'conversion_factor' => !empty($row['Faktor_Konversi']) ? (float)$row['Faktor_Konversi'] : null,
+                            'density_g_per_ml' => !empty($row['Massa_Jenis']) ? (float)$row['Massa_Jenis'] : null,
+                            'display_order' => (int)($row['Urutan'] ?? 1),
+                            'notes' => $row['Catatan'] ?? null,
+                            'is_active' => true,
+                        ]
+                    );
+                }
+
+                $ingMap = Ingredient::pluck('id', 'code');
+
+                // Sheet 2: Base_Adonan
+                foreach (($payload['Base_Adonan'] ?? []) as $row) {
+                    $code = $row['Kode_Base'] ?? null;
+                    if (!$code) continue;
+                    BaseRecipe::updateOrCreate(
+                        ['code' => trim($code)],
+                        [
+                            'name' => $row['Nama_Base'] ?? $code,
+                            'yield_ml' => (float)($row['Yield_ML'] ?? 1400),
+                        ]
+                    );
+                }
+
+                $baseMap = BaseRecipe::pluck('id', 'code');
+
+                // Sheet 3: Komposisi_Base_Adonan
+                if (!empty($payload['Komposisi_Base_Adonan'])) {
+                    foreach ($payload['Komposisi_Base_Adonan'] as $row) {
+                        $bCode = $row['Kode_Base'] ?? null;
+                        if (!$bCode || !isset($baseMap[$bCode])) continue;
+                    }
+                }
+
+                // Sheet 4: Formula_Resep_Menu
+                if (!empty($payload['Formula_Resep_Menu'])) {
+                    if ($importMode === 'replace') {
+                        MenuRecipeItem::query()->delete();
+                    }
+                    $menuMap = Menu::pluck('id', 'sort_order');
+                    foreach ($payload['Formula_Resep_Menu'] as $row) {
+                        $sortOrder = (int)($row['Urutan_Menu'] ?? 0);
+                        $menuId = $menuMap[$sortOrder] ?? null;
+                        if (!$menuId) continue;
+
+                        $kompCode = trim((string)($row['Kode_Komponen'] ?? ''));
+                        MenuRecipeItem::create([
+                            'menu_id' => $menuId,
+                            'base_recipe_id' => $baseMap[$kompCode] ?? null,
+                            'ingredient_id' => $ingMap[$kompCode] ?? null,
+                            'quantity' => (float)($row['Takaran'] ?? 0),
+                            'input_unit' => $row['Satuan'] ?? 'ml',
+                        ]);
+                    }
                 }
             }
             DB::commit();

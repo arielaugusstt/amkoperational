@@ -87,6 +87,7 @@ Route::prefix('api')->group(function () {
     Route::post('/master-data/resep/mapping/delete-all', [MasterDataController::class, 'destroyAllMappings']);
 
     Route::post('/master-data/import', [MasterDataController::class, 'importMasterData']);
+    Route::post('/master-data/seed-defaults', [MasterDataController::class, 'seedDefaultMasterData']);
 });
 
 // Single Page Application Fallback Route

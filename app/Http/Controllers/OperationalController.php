@@ -23,6 +23,8 @@ class OperationalController extends Controller
 {
     public function initialData()
     {
+        MasterDataController::ensureSystemBootstrapped();
+
         $stands = Outlet::where('status_aktif', true)->orderBy('blok_wa')->orderBy('urutan_tampil')->get();
         $spgList = User::where('role', 'spg')->where('status_aktif', true)->orderBy('name')->get(['id', 'id_spg', 'name', 'username']);
         $menu1Nominals = Menu1NominalConfig::where('status_aktif', true)->orderBy('urutan')->get();

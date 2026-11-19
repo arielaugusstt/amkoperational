@@ -10,10 +10,12 @@ export function downloadTemplate1(stands = [], spgList = []) {
         Wilayah_Laporan: s.wilayah_laporan,
         Blok_WA: s.blok_wa,
         Urutan_Tampil: s.urutan_tampil,
+        Price_Tier: s.price_tier || 'all_outlet',
+        Is_Premium: s.is_premium ? 'Ya' : 'Tidak',
         Punya_AMKopi: s.punya_amkopi ? 'Ya' : 'Tidak',
         Tampilkan_Csdng_WA: s.tampilkan_csdng_wa ? 'Ya' : 'Tidak',
         Tampilkan_PTT_WA: s.tampilkan_ptt_wa ? 'Ya' : 'Tidak',
-        Status_Aktif: s.status_aktif ? 'Ya' : 'Tidak',
+        Status_Aktif: s.status_aktif ? 'Aktif' : 'Non-Aktif',
     }));
     const ws1 = XLSX.utils.json_to_sheet(standData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Master_Stand');
@@ -23,159 +25,139 @@ export function downloadTemplate1(stands = [], spgList = []) {
         ? spgList.map(u => ({
             ID_SPG: u.id_spg || '',
             Nama_SPG: u.name,
-            Username: u.username,
-            PIN_Password: u.pin_plain || '1234',
-            Status_Aktif: u.status_aktif ? 'Ya' : 'Tidak',
+            Username_Login: u.username,
+            PIN_Default: u.pin_plain || '1234',
+            Status_Aktif: u.status_aktif ? 'Aktif' : 'Non-Aktif',
         }))
         : [{
             ID_SPG: 'SPG-01',
             Nama_SPG: 'Contoh Nama SPG',
-            Username: 'spg1',
-            PIN_Password: '1234',
-            Status_Aktif: 'Ya',
+            Username_Login: 'spg1',
+            PIN_Default: '1234',
+            Status_Aktif: 'Aktif',
         }];
     const ws2 = XLSX.utils.json_to_sheet(spgData);
     XLSX.utils.book_append_sheet(wb, ws2, 'Master_SPG');
 
-    XLSX.writeFile(wb, 'Master_Stand_dan_SPG.xlsx');
+    XLSX.writeFile(wb, 'Template1_Master_Outlet_dan_SPG.xlsx');
 }
 
 export function downloadTemplate2(nominals = [], qtys = []) {
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Kategori_Nominal_Menu1
     const nomData = nominals.map(n => ({
         Kode_Kategori: n.kode_kategori,
         Label_Input_Nominal: n.label_input_nominal,
-        Urutan: n.urutan,
-        Status_Aktif: n.status_aktif ? 'Ya' : 'Tidak',
+        Keterangan_Bantu: n.keterangan_bantu || '',
+        Urutan_Tampil: n.urutan,
+        Status_Aktif: n.status_aktif ? 'Aktif' : 'Non-Aktif',
     }));
     const ws1 = XLSX.utils.json_to_sheet(nomData);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Kategori_Nominal_Menu1');
+    XLSX.utils.book_append_sheet(wb, ws1, 'Menu1_Kategori_Nominal');
 
-    // Sheet 2: Item_QTY_Menu1
     const qtyData = qtys.map(q => ({
         Kode_QTY_Menu1: q.kode_qty_menu1,
         Label_Input_QTY: q.label_input_qty,
-        Urutan: q.urutan,
-        Status_Aktif: q.status_aktif ? 'Ya' : 'Tidak',
+        Urutan_Tampil: q.urutan,
+        Status_Aktif: q.status_aktif ? 'Aktif' : 'Non-Aktif',
     }));
     const ws2 = XLSX.utils.json_to_sheet(qtyData);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Item_QTY_Menu1');
+    XLSX.utils.book_append_sheet(wb, ws2, 'Menu1_Item_QTY');
 
-    XLSX.writeFile(wb, 'Master_Konfigurasi_Menu1.xlsx');
+    XLSX.writeFile(wb, 'Template2_Konfigurasi_Menu1.xlsx');
 }
 
-export function downloadTemplate3(menu2Items = [], stands = [], prices = {}) {
+export function downloadTemplate3(menu2Items = []) {
     const wb = XLSX.utils.book_new();
 
-    let rows = [];
-    if (menu2Items && menu2Items.length > 0) {
-        rows = menu2Items.map(item => {
-            const row = {
-                Kelompok_Menu: item.kelompok_menu,
-                Kode_Item: item.kode_item,
-                Nama_Item: item.nama_item,
-                Status_Aktif: item.status_aktif ? 'Ya' : 'Tidak',
-                Harga_Default: item.harga_default,
-            };
+    const getTier = (item, tier) => {
+        const found = (item.prices || []).find(p => p.price_tier === tier);
+        return found && found.price !== null ? found.price : '';
+    };
 
-            const itemPrices = prices[item.id] || [];
-            const priceMap = {};
-            itemPrices.forEach(p => {
-                priceMap[p.stand_id] = p.harga;
-            });
-
-            stands.forEach(stand => {
-                row[stand.kode_stand] = priceMap[stand.id] !== undefined ? priceMap[stand.id] : item.harga_default;
-            });
-
-            return row;
-        });
-    } else {
-        const sampleRow = {
-            Kelompok_Menu: 'AMK 27 Menu',
-            Kode_Item: 'AMK_SAMPLE',
-            Nama_Item: 'Contoh Menu AMK',
-            Status_Aktif: 'Ya',
-            Harga_Default: 10000,
-        };
-        stands.forEach(stand => {
-            sampleRow[stand.kode_stand] = 10000;
-        });
-        rows = [sampleRow];
-    }
+    const rows = (menu2Items || []).map(item => ({
+        Urutan: item.sort_order,
+        Nama_Menu: item.name,
+        Kelompok_Menu: item.menu_group,
+        Kategori_Laporan: item.report_category,
+        Kode_Gelas: item.cup_ingredient?.code || '',
+        Harga_All_Outlet: getTier(item, 'all_outlet'),
+        Harga_TP1: getTier(item, 'tp1'),
+        Harga_PTC: getTier(item, 'ptc'),
+        Harga_TP2: getTier(item, 'tp2'),
+        Status_Aktif: item.is_active ? 'Aktif' : 'Non-Aktif',
+    }));
 
     const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, 'Master_Menu2');
-    XLSX.writeFile(wb, 'Master_Menu_dan_Harga_Stand_Menu2.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, 'Menu_4Tier_Harga');
+    XLSX.writeFile(wb, 'Template3_54_Menu_dan_4Tier_Harga.xlsx');
 }
 
-export function downloadTemplate4(ingredients = [], params = [], batches = [], mappings = [], stands = []) {
+export function downloadTemplate4(ingredients = [], baseRecipes = [], menu2Items = []) {
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Master_Bahan_Menu3
-    const ingRows = ingredients.map(ing => {
-        const row = {
-            Kode_Bahan: ing.kode_bahan,
-            Kategori_Bahan: ing.kategori_bahan,
-            Nama_Bahan_Baku: ing.nama_bahan_baku,
-            Satuan: ing.satuan,
-            Link_Kode_QTY_Menu1: ing.link_kode_qty_menu1 || '',
-        };
-        stands.forEach(s => {
-            row[`Stok_Awal_${s.kode_stand}`] = 100;
-        });
-        return row;
-    });
-    const ws1 = XLSX.utils.json_to_sheet(ingRows);
-    XLSX.utils.book_append_sheet(wb, ws1, 'Master_Bahan_Menu3');
-
-    // Sheet 2: Parameter_Global_Resep
-    const paramRows = params.map(p => ({
-        Param_Key: p.param_key,
-        Nama_Parameter: p.nama_parameter,
-        Nilai: p.nilai_param,
-        Satuan: p.satuan,
-        Effective_Date: p.effective_date,
-        Keterangan: p.keterangan || '',
+    // Sheet 1: Master_Bahan_Baku (28 items)
+    const ingRows = (ingredients || []).map(ing => ({
+        Urutan: ing.display_order,
+        Kode_Bahan: ing.code,
+        Nama_Bahan_Baku: ing.name,
+        Kategori: ing.category,
+        Dashboard_Tier: ing.dashboard_tier,
+        Satuan_Dasar: ing.base_unit,
+        Satuan_Konversi: ing.conversion_unit || '',
+        Faktor_Konversi: ing.conversion_factor || '',
+        Massa_Jenis: ing.density_g_per_ml || '',
+        Catatan: ing.notes || '',
     }));
-    const ws2 = XLSX.utils.json_to_sheet(paramRows);
-    XLSX.utils.book_append_sheet(wb, ws2, 'Parameter_Global_Resep');
+    const ws1 = XLSX.utils.json_to_sheet(ingRows);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Master_Bahan_Baku');
 
-    // Sheet 3: Rumus_Batch_Dapur
-    const batchRows = [];
-    batches.forEach(b => {
-        (b.components || []).forEach(comp => {
-            batchRows.push({
-                Kode_Batch: b.kode_batch,
-                Nama_Batch: b.nama_batch,
-                Volume_Batch_ML: b.volume_batch_ml,
-                Tipe_Komponen: comp.tipe_komponen,
-                Kode_Referensi: comp.kode_referensi,
-                Nama_Komponen: comp.nama_komponen,
-                Jumlah: comp.jumlah,
-                Satuan: comp.satuan,
+    // Sheet 2: Base_Adonan (7 Base)
+    const baseRows = (baseRecipes || []).map(b => ({
+        Kode_Base: b.code,
+        Nama_Base: b.name,
+        Yield_ML: b.yield_ml,
+    }));
+    const ws2 = XLSX.utils.json_to_sheet(baseRows);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Base_Adonan');
+
+    // Sheet 3: Komposisi_Base_Adonan
+    const baseCompRows = [];
+    (baseRecipes || []).forEach(b => {
+        (b.items || []).forEach(it => {
+            baseCompRows.push({
+                Kode_Base: b.code,
+                Tipe_Komponen: it.child_base_recipe ? 'CHILD_BASE' : 'INGREDIENT',
+                Kode_Komponen: it.ingredient?.code || it.child_base_recipe?.code || '',
+                Nama_Komponen: it.ingredient?.name || it.child_base_recipe?.name || '',
+                Takaran: it.quantity,
+                Satuan: it.unit,
             });
         });
     });
-    const ws3 = XLSX.utils.json_to_sheet(batchRows);
-    XLSX.utils.book_append_sheet(wb, ws3, 'Rumus_Batch_Dapur');
+    const ws3 = XLSX.utils.json_to_sheet(baseCompRows);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Komposisi_Base_Adonan');
 
-    // Sheet 4: Mapping_Resep_Menu2
-    const mapRows = mappings.map(m => ({
-        Menu2_Item_ID: m.menu2_item_id,
-        Tipe_Komponen: m.tipe_komponen,
-        Kode_Referensi: m.kode_referensi,
-        Mode_Takaran: m.mode_takaran,
-        Nilai_Takaran: m.nilai_takaran,
-        Satuan: m.satuan,
-        Effective_Date: m.effective_date,
-    }));
-    const ws4 = XLSX.utils.json_to_sheet(mapRows);
-    XLSX.utils.book_append_sheet(wb, ws4, 'Mapping_Resep_Menu2');
+    // Sheet 4: Formula_Resep_Menu (54 Menus BOM)
+    const formulaRows = [];
+    (menu2Items || []).forEach(m => {
+        (m.recipe_items || []).forEach(ri => {
+            formulaRows.push({
+                Urutan_Menu: m.sort_order,
+                Nama_Menu: m.name,
+                Kode_Gelas: m.cup_ingredient?.code || '',
+                Tipe_Komponen: ri.base_recipe ? 'BASE_ADONAN' : 'INGREDIENT',
+                Kode_Komponen: ri.base_recipe?.code || ri.ingredient?.code || '',
+                Nama_Komponen: ri.base_recipe?.name || ri.ingredient?.name || '',
+                Takaran: ri.quantity,
+                Satuan: ri.input_unit,
+            });
+        });
+    });
+    const ws4 = XLSX.utils.json_to_sheet(formulaRows);
+    XLSX.utils.book_append_sheet(wb, ws4, 'Formula_Resep_Menu');
 
-    XLSX.writeFile(wb, 'Master_Bahan_Baku_dan_Resep_AMK.xlsx');
+    XLSX.writeFile(wb, 'Template4_28_Bahan_7_Base_dan_54_Formula_BOM.xlsx');
 }
 
 export function parseExcelFile(file) {
@@ -205,7 +187,6 @@ export function parseExcelFile(file) {
 export function exportComprehensiveReport(summary, standsProgress, tanggal, auditData = []) {
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Rekap_Harian
     const rekapData = standsProgress.map(p => ({
         Kode_Stand: p.kode_stand,
         Nama_Stand: p.nama_stand,
@@ -225,13 +206,12 @@ export function exportComprehensiveReport(summary, standsProgress, tanggal, audi
     const ws1 = XLSX.utils.json_to_sheet(rekapData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Rekap_Operasional');
 
-    // Sheet 2: Audit_Reverse_Resep
     if (auditData && auditData.length > 0) {
         const auditRows = auditData.map(a => ({
-            Kode_Bahan: a.kode_bahan,
-            Nama_Bahan_Baku: a.nama_bahan_baku,
-            Satuan: a.satuan,
-            Pemakaian_Teoritis_Menu2: a.teoritis,
+            Kode_Bahan: a.kode_bahan || a.code,
+            Nama_Bahan_Baku: a.nama_bahan_baku || a.name,
+            Satuan: a.satuan || a.base_unit,
+            Pemakaian_Teoritis_Menu2: a.teoritis ?? a.quantity,
             Pemakaian_Aktual_Menu3: a.aktual,
             Selisih_Aktual_Min_Teoritis: a.selisih,
             Deviasi_Persen: a.deviasi_percent + '%',
@@ -247,10 +227,13 @@ export function exportComprehensiveReport(summary, standsProgress, tanggal, audi
 export function exportAuditReport(auditData, tanggal, standNama = 'Semua Stand') {
     const wb = XLSX.utils.book_new();
     const rows = (auditData || []).map(a => ({
-        Kode_Bahan: a.kode_bahan,
-        Nama_Bahan_Baku: a.nama_bahan_baku,
-        Satuan: a.satuan,
-        Pemakaian_Teoritis_Menu2: a.teoritis,
+        Kode_Bahan: a.kode_bahan || a.code,
+        Nama_Bahan_Baku: a.nama_bahan_baku || a.name,
+        Kategori: a.category || '',
+        Tier: a.dashboard_tier || '',
+        Satuan: a.satuan || a.base_unit,
+        Pemakaian_Teoritis_Menu2: a.teoritis ?? a.quantity,
+        Konversi_Sekunder: a.converted_quantity ? `${a.converted_quantity} ${a.conversion_unit}` : '-',
         Pemakaian_Aktual_Menu3: a.aktual,
         Selisih: a.selisih,
         Deviasi_Persen: a.deviasi_percent + '%',
@@ -260,4 +243,3 @@ export function exportAuditReport(auditData, tanggal, standNama = 'Semua Stand')
     XLSX.utils.book_append_sheet(wb, ws, 'Audit_Reverse_Resep');
     XLSX.writeFile(wb, `Audit_Reverse_Resep_${tanggal}_${standNama.replace(/\s+/g, '_')}.xlsx`);
 }
-
