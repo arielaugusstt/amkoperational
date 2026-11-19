@@ -127,17 +127,17 @@ class WhatsAppReportService
         }
 
         // 10 Stand AMKopi in exact order:
-        // R-1, R-2, R-4, TP 1, TP 2, TP 3, GC, Delta, BG LL, BG-L2
+        // R-1, R-2, R-4, TP-1, TP-2, TP-3, GC, Delta, BG-LL, BG-L2
         $amkopiCodes = [
             'R-1' => 'AMKopi R-1',
             'R-2' => 'AMKopi R-2',
             'R-4' => 'AMKopi R-4',
-            'TP 1' => 'AMKopi TP-1',
-            'TP 2' => 'AMKopi TP-2',
-            'TP 3' => 'AMKopi TP-3',
+            'TP-1' => 'AMKopi TP-1',
+            'TP-2' => 'AMKopi TP-2',
+            'TP-3' => 'AMKopi TP-3',
             'GC' => 'AMKopi GC',
             'Delta' => 'AMKopi Delta',
-            'BG LL' => 'AMKopi BG-LL',
+            'BG-LL' => 'AMKopi BG-LL',
             'BG-L2' => 'AMKopi BG-L2',
         ];
 

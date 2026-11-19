@@ -177,23 +177,17 @@ class AdminController extends Controller
         $request->validate([
             'param_key' => 'required|string',
             'nilai_param' => 'required|numeric',
-            'effective_date' => 'required|date',
         ]);
 
-        $param = RecipeGlobalParam::create([
-            'param_key' => $request->input('param_key'),
-            'nama_parameter' => $request->input('nama_parameter', $request->input('param_key')),
-            'nilai_param' => (float)$request->input('nilai_param'),
-            'satuan' => $request->input('satuan', 'ml'),
-            'effective_date' => $request->input('effective_date'),
-            'keterangan' => $request->input('keterangan'),
-            'status_aktif' => true,
-        ]);
+        $setting = AppSetting::updateOrCreate(
+            ['setting_key' => $request->input('param_key')],
+            ['setting_value' => (string)$request->input('nilai_param')]
+        );
 
         return response()->json([
             'success' => true,
-            'message' => 'Parameter resep berhasil disimpan dengan tanggal efektif baru!',
-            'data' => $param,
+            'message' => 'Parameter berhasil diperbarui!',
+            'data' => $setting,
         ]);
     }
 

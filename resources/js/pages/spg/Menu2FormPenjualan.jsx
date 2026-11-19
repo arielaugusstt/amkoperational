@@ -69,24 +69,49 @@ export default function Menu2FormPenjualan({
             .finally(() => setLoadingGatekeeper(false));
     }, [selectedStand?.id, tanggal]);
 
-    // Group items by kelompok_menu
+    // Price helper for current stand based on 4-Tier Price (all_outlet | tp1 | ptc | tp2)
+    const getItemPrice = (item) => {
+        if (!selectedStand) return item?.harga_default ?? 0;
+        const tier = selectedStand.price_tier || 'all_outlet';
+        const pricesList = item?.prices || menu2Prices[item?.id] || [];
+        const foundTier = pricesList.find(p => p.price_tier === tier);
+        if (foundTier) return foundTier.price;
+        const foundStand = pricesList.find(p => p.stand_id === selectedStand.id);
+        if (foundStand) return foundStand.harga ?? foundStand.price;
+        return item?.outlet_price ?? null;
+    };
+
+    // Filter & sort menus strictly by sort_order 1..54 and outlet rules
+    const filteredMenus = useMemo(() => {
+        if (!selectedStand) return [];
+        const isPremium = !!selectedStand.is_premium;
+        const hasAmkopi = !!selectedStand.punya_amkopi;
+
+        return [...menu2Items]
+            .sort((a, b) => (a.sort_order || a.urutan || 0) - (b.sort_order || b.urutan || 0))
+            .filter(item => {
+                const price = getItemPrice(item);
+                if (price === null || price === undefined) return false;
+
+                const grp = item.menu_group;
+                if (isPremium && (grp === 'amk_reguler' || grp === 'amk_jumbo')) return false;
+                if (!isPremium && grp === 'amk_premium') return false;
+                if (grp === 'amkopi' && !hasAmkopi) return false;
+
+                return true;
+            });
+    }, [menu2Items, menu2Prices, selectedStand]);
+
+    // Group items by kelompok_menu while preserving locked sort_order 1..54
     const groupedItems = useMemo(() => {
         const groups = {};
-        menu2Items.forEach(item => {
-            const groupName = item.kelompok_menu || 'Lainnya';
+        filteredMenus.forEach(item => {
+            const groupName = item.kelompok_menu || item.menu_group || 'Lainnya';
             if (!groups[groupName]) groups[groupName] = [];
             groups[groupName].push(item);
         });
         return groups;
-    }, [menu2Items]);
-
-    // Price helper for current stand
-    const getItemPrice = (itemId, defaultPrice) => {
-        if (!selectedStand?.id) return defaultPrice;
-        const pricesList = menu2Prices[itemId] || [];
-        const found = pricesList.find(p => p.stand_id === selectedStand.id);
-        return found ? found.harga : defaultPrice;
-    };
+    }, [filteredMenus]);
 
     // Calculate subtotal per group & grand total
     const { groupCalculations, grandTotal } = useMemo(() => {
@@ -99,7 +124,7 @@ export default function Menu2FormPenjualan({
 
             groupedItems[groupName].forEach(item => {
                 const qty = parseInt(formData.quantities?.[item.id] || 0, 10);
-                const price = getItemPrice(item.id, item.harga_default);
+                const price = getItemPrice(item) || 0;
                 if (qty > 0) {
                     groupQty += qty;
                     groupRp += (qty * price);
@@ -182,14 +207,16 @@ export default function Menu2FormPenjualan({
 
         // Format items_sold array
         const itemsSold = [];
-        menu2Items.forEach(item => {
+        filteredMenus.forEach(item => {
             const qty = parseInt(formData.quantities?.[item.id] || 0, 10);
-            const price = getItemPrice(item.id, item.harga_default);
+            const price = getItemPrice(item) || 0;
             if (qty > 0) {
                 itemsSold.push({
+                    menu_id: item.id,
                     menu2_item_id: item.id,
+                    sort_order: item.sort_order,
                     kode_item: item.kode_item,
-                    nama_item: item.nama_item,
+                    nama_item: item.nama_item || item.name,
                     kelompok_menu: item.kelompok_menu,
                     qty: qty,
                     harga: price,
@@ -371,7 +398,7 @@ export default function Menu2FormPenjualan({
                                 <div className="divide-y divide-slate-100 p-2 sm:p-3 space-y-2">
                                     {items.map(item => {
                                         const qty = parseInt(formData.quantities?.[item.id] || 0, 10);
-                                        const price = getItemPrice(item.id, item.harga_default);
+                                        const price = getItemPrice(item) || 0;
                                         const subtotal = qty * price;
 
                                         return (
@@ -382,10 +409,11 @@ export default function Menu2FormPenjualan({
                                                 <div className="flex items-center justify-between mb-1.5">
                                                     <div>
                                                         <span className="text-xs font-bold text-slate-900 block">
-                                                            {item.nama_item}
+                                                            <span className="text-slate-400 font-mono mr-1">#{item.sort_order}</span>
+                                                            {item.nama_item || item.name}
                                                         </span>
                                                         <span className="text-[11px] font-medium text-slate-400">
-                                                            Harga Stand: {formatRupiah(price)}
+                                                            Harga ({selectedStand?.price_tier}): {formatRupiah(price)}
                                                         </span>
                                                     </div>
 

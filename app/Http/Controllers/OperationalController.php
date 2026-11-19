@@ -5,33 +5,33 @@ namespace App\Http\Controllers;
 use App\Models\DailyInventoryMenu3;
 use App\Models\DailyReportMenu1;
 use App\Models\DailySaleMenu2;
-use App\Models\MasterIngredient;
-use App\Models\MasterStand;
+use App\Models\Ingredient;
+use App\Models\Menu;
 use App\Models\Menu1NominalConfig;
 use App\Models\Menu1QtyConfig;
-use App\Models\Menu2Item;
-use App\Models\Menu2StandPrice;
+use App\Models\MenuPrice;
+use App\Models\Outlet;
 use App\Models\StandIngredientStock;
 use App\Models\StockOpnameRequest;
 use App\Models\User;
+use App\Services\ReverseAnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class OperationalController extends Controller
 {
     public function initialData()
     {
-        $stands = MasterStand::where('status_aktif', true)->orderBy('urutan_tampil')->get();
+        $stands = Outlet::where('status_aktif', true)->orderBy('blok_wa')->orderBy('urutan_tampil')->get();
         $spgList = User::where('role', 'spg')->where('status_aktif', true)->orderBy('name')->get(['id', 'id_spg', 'name', 'username']);
         $menu1Nominals = Menu1NominalConfig::where('status_aktif', true)->orderBy('urutan')->get();
         $menu1Qtys = Menu1QtyConfig::where('status_aktif', true)->orderBy('urutan')->get();
 
-        $menu2Items = Menu2Item::where('status_aktif', true)->orderBy('urutan')->get();
-        $menu2Prices = Menu2StandPrice::all()->groupBy('menu2_item_id');
+        $menu2Items = Menu::with(['prices', 'cupIngredient', 'recipeItems'])->where('is_active', true)->orderBy('sort_order')->get();
+        $menu2Prices = MenuPrice::all()->groupBy('menu_id');
 
-        $ingredients = MasterIngredient::where('status_aktif', true)->orderBy('urutan')->get();
+        $ingredients = Ingredient::where('is_active', true)->orderBy('dashboard_tier')->orderBy('display_order')->get();
         $stocks = StandIngredientStock::all()->groupBy('stand_id');
 
         return response()->json([
@@ -92,7 +92,7 @@ class OperationalController extends Controller
     public function submitMenu1(Request $request)
     {
         $request->validate([
-            'stand_id' => 'required|exists:master_stands,id',
+            'stand_id' => 'required|exists:outlets,id',
             'tanggal' => 'required|date',
             'spg_list' => 'required|array|min:1',
             'total_semua_penjualan' => 'required|numeric',
@@ -106,7 +106,6 @@ class OperationalController extends Controller
         $qris = (int)$request->input('nominal_qris');
         $tunai = (int)$request->input('nominal_tunai');
 
-        // Validation lock: QRIS + Tunai must equal Total Penjualan
         if (($qris + $tunai) !== $totalPenjualan) {
             $selisih = abs($totalPenjualan - ($qris + $tunai));
             return response()->json([
@@ -143,7 +142,7 @@ class OperationalController extends Controller
         ]);
     }
 
-    public function getMenu2(Request $request)
+    public function getMenu2(Request $request, ReverseAnalyticsService $reverseService)
     {
         $standId = $request->query('stand_id');
         $tanggal = $request->query('tanggal', date('Y-m-d'));
@@ -151,9 +150,12 @@ class OperationalController extends Controller
         $menu1 = DailyReportMenu1::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
         $menu2 = DailySaleMenu2::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
 
+        $filteredMenus = $standId ? $reverseService->getMenusForOutlet((int)$standId) : collect([]);
+
         return response()->json([
             'menu1_available' => $menu1 !== null,
             'menu1_total' => $menu1 ? $menu1->total_semua_penjualan : 0,
+            'filtered_menus' => $filteredMenus,
             'data' => $menu2,
         ]);
     }
@@ -161,7 +163,7 @@ class OperationalController extends Controller
     public function submitMenu2(Request $request)
     {
         $request->validate([
-            'stand_id' => 'required|exists:master_stands,id',
+            'stand_id' => 'required|exists:outlets,id',
             'tanggal' => 'required|date',
             'items_sold' => 'required|array',
             'grand_total' => 'required|numeric',
@@ -171,7 +173,6 @@ class OperationalController extends Controller
         $tanggal = $request->input('tanggal');
         $grandTotal = (int)$request->input('grand_total');
 
-        // Gatekeeper check: Menu 1 MUST exist
         $menu1 = DailyReportMenu1::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
         if (!$menu1) {
             return response()->json([
@@ -180,7 +181,6 @@ class OperationalController extends Controller
             ], 422);
         }
 
-        // Lock validation: Grand Total Menu 2 MUST equal Total Penjualan Menu 1
         if ($grandTotal !== (int)$menu1->total_semua_penjualan) {
             $selisih = abs((int)$menu1->total_semua_penjualan - $grandTotal);
             return response()->json([
@@ -218,7 +218,6 @@ class OperationalController extends Controller
         $menu1 = DailyReportMenu1::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
         $existing = DailyInventoryMenu3::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
 
-        // Previous day stok akhir or initial stock
         $prevDate = Carbon::parse($tanggal)->subDay()->format('Y-m-d');
         $prevReport = DailyInventoryMenu3::where('stand_id', $standId)->where('tanggal', $prevDate)->first();
 
@@ -229,13 +228,11 @@ class OperationalController extends Controller
             }
         }
 
-        // Master stock fallback
         $masterStocks = StandIngredientStock::where('stand_id', $standId)->get()->keyBy('ingredient_id');
-        $ingredients = MasterIngredient::where('status_aktif', true)->orderBy('urutan')->get();
+        $ingredients = Ingredient::where('is_active', true)->orderBy('dashboard_tier')->orderBy('display_order')->get();
 
         $preparedItems = [];
         foreach ($ingredients as $ing) {
-            // Determine stok awal
             $stokAwal = 0.0;
             if (isset($prevStocksMap[$ing->id])) {
                 $stokAwal = $prevStocksMap[$ing->id];
@@ -243,7 +240,6 @@ class OperationalController extends Controller
                 $stokAwal = (float)$masterStocks[$ing->id]->stok_terkini;
             }
 
-            // Link to Menu 1 QTY if available
             $refMenu1Qty = null;
             if ($ing->link_kode_qty_menu1 && $menu1 && isset($menu1->qty_per_item[$ing->link_kode_qty_menu1])) {
                 $refMenu1Qty = (float)$menu1->qty_per_item[$ing->link_kode_qty_menu1];
@@ -251,10 +247,10 @@ class OperationalController extends Controller
 
             $preparedItems[] = [
                 'ingredient_id' => $ing->id,
-                'kode_bahan' => $ing->kode_bahan,
-                'kategori_bahan' => $ing->kategori_bahan,
-                'nama_bahan_baku' => $ing->nama_bahan_baku,
-                'satuan' => $ing->satuan,
+                'kode_bahan' => $ing->code,
+                'kategori_bahan' => $ing->category,
+                'nama_bahan_baku' => $ing->name,
+                'satuan' => $ing->base_unit,
                 'link_kode_qty_menu1' => $ing->link_kode_qty_menu1,
                 'ref_menu1_qty' => $refMenu1Qty,
                 'stok_awal' => $stokAwal,
@@ -275,7 +271,7 @@ class OperationalController extends Controller
     public function submitMenu3(Request $request)
     {
         $request->validate([
-            'stand_id' => 'required|exists:master_stands,id',
+            'stand_id' => 'required|exists:outlets,id',
             'tanggal' => 'required|date',
             'inventory_items' => 'required|array',
         ]);
@@ -283,7 +279,6 @@ class OperationalController extends Controller
         $standId = $request->input('stand_id');
         $tanggal = $request->input('tanggal');
 
-        // Gatekeeper check: Menu 1 MUST exist
         $menu1 = DailyReportMenu1::where('stand_id', $standId)->where('tanggal', $tanggal)->first();
         if (!$menu1) {
             return response()->json([
@@ -295,7 +290,6 @@ class OperationalController extends Controller
         $userId = Auth::id();
         $items = $request->input('inventory_items');
 
-        // Ensure calculated stok akhir
         foreach ($items as &$item) {
             $awal = (float)($item['stok_awal'] ?? 0);
             $masuk = (float)($item['barang_masuk'] ?? 0);
@@ -303,7 +297,6 @@ class OperationalController extends Controller
             $rusak = (float)($item['barang_rusak'] ?? 0);
             $item['stok_akhir'] = $awal + $masuk - $terpakai - $rusak;
 
-            // Also update stand_ingredient_stocks
             StandIngredientStock::updateOrCreate(
                 ['stand_id' => $standId, 'ingredient_id' => $item['ingredient_id']],
                 ['stok_terkini' => $item['stok_akhir']]
@@ -330,7 +323,7 @@ class OperationalController extends Controller
     public function submitStockOpname(Request $request)
     {
         $request->validate([
-            'stand_id' => 'required|exists:master_stands,id',
+            'stand_id' => 'required|exists:outlets,id',
             'tanggal' => 'required|date',
             'opname_items' => 'required|array',
         ]);
@@ -352,4 +345,3 @@ class OperationalController extends Controller
         ]);
     }
 }
-
