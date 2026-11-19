@@ -323,19 +323,27 @@ export default function MasterDataExcel() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                                {spgList.map(u => (
-                                    <tr key={u.id} className="hover:bg-slate-50/80">
-                                        <td className="px-4 py-3 font-mono font-bold text-amber-800">{u.id_spg}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-900">{u.name}</td>
-                                        <td className="px-4 py-3 font-mono text-slate-600">@{u.username}</td>
-                                        <td className="px-4 py-3 font-mono text-slate-400">{u.pin_plain || '1234'}</td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status_aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                                                {u.status_aktif ? 'Aktif' : 'Non-Aktif'}
-                                            </span>
+                                {spgList.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-4 py-8 text-center text-slate-400 font-medium">
+                                            Belum ada data SPG. Silakan upload file Template 1 (Master Stand & SPG) untuk menambahkan SPG riil.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    spgList.map(u => (
+                                        <tr key={u.id} className="hover:bg-slate-50/80">
+                                            <td className="px-4 py-3 font-mono font-bold text-amber-800">{u.id_spg}</td>
+                                            <td className="px-4 py-3 font-bold text-slate-900">{u.name}</td>
+                                            <td className="px-4 py-3 font-mono text-slate-600">@{u.username}</td>
+                                            <td className="px-4 py-3 font-mono text-slate-400">{u.pin_plain || '1234'}</td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status_aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                                                    {u.status_aktif ? 'Aktif' : 'Non-Aktif'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -355,26 +363,34 @@ export default function MasterDataExcel() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                                {menu2Items.map(item => (
-                                    <tr key={item.id} className="hover:bg-slate-50/80">
-                                        <td className="px-4 py-3 font-bold text-indigo-700">{item.kelompok_menu}</td>
-                                        <td className="px-4 py-3 font-mono text-slate-600">{item.kode_item}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-900">{item.nama_item}</td>
-                                        <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
-                                            {formatRupiah(item.harga_default)}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.recipe_status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                                                {item.recipe_status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status_aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                                                {item.status_aktif ? 'Aktif' : 'Non-Aktif'}
-                                            </span>
+                                {menu2Items.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-4 py-8 text-center text-slate-400 font-medium">
+                                            Belum ada data Menu 2 & Harga Stand. Silakan upload file Template 3 (Master Menu 2 & Harga) untuk memasukkan menu riil.
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    menu2Items.map(item => (
+                                        <tr key={item.id} className="hover:bg-slate-50/80">
+                                            <td className="px-4 py-3 font-bold text-indigo-700">{item.kelompok_menu}</td>
+                                            <td className="px-4 py-3 font-mono text-slate-600">{item.kode_item}</td>
+                                            <td className="px-4 py-3 font-bold text-slate-900">{item.nama_item}</td>
+                                            <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
+                                                {formatRupiah(item.harga_default)}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.recipe_status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                                                    {item.recipe_status}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.status_aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                                                    {item.status_aktif ? 'Aktif' : 'Non-Aktif'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

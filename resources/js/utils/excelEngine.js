@@ -19,13 +19,21 @@ export function downloadTemplate1(stands = [], spgList = []) {
     XLSX.utils.book_append_sheet(wb, ws1, 'Master_Stand');
 
     // Sheet 2: Master_SPG
-    const spgData = spgList.map(u => ({
-        ID_SPG: u.id_spg || '',
-        Nama_SPG: u.name,
-        Username: u.username,
-        PIN_Password: u.pin_plain || '1234',
-        Status_Aktif: u.status_aktif ? 'Ya' : 'Tidak',
-    }));
+    const spgData = (spgList && spgList.length > 0)
+        ? spgList.map(u => ({
+            ID_SPG: u.id_spg || '',
+            Nama_SPG: u.name,
+            Username: u.username,
+            PIN_Password: u.pin_plain || '1234',
+            Status_Aktif: u.status_aktif ? 'Ya' : 'Tidak',
+        }))
+        : [{
+            ID_SPG: 'SPG-01',
+            Nama_SPG: 'Contoh Nama SPG',
+            Username: 'spg1',
+            PIN_Password: '1234',
+            Status_Aktif: 'Ya',
+        }];
     const ws2 = XLSX.utils.json_to_sheet(spgData);
     XLSX.utils.book_append_sheet(wb, ws2, 'Master_SPG');
 
@@ -61,27 +69,42 @@ export function downloadTemplate2(nominals = [], qtys = []) {
 export function downloadTemplate3(menu2Items = [], stands = [], prices = {}) {
     const wb = XLSX.utils.book_new();
 
-    const rows = menu2Items.map(item => {
-        const row = {
-            Kelompok_Menu: item.kelompok_menu,
-            Kode_Item: item.kode_item,
-            Nama_Item: item.nama_item,
-            Status_Aktif: item.status_aktif ? 'Ya' : 'Tidak',
-            Harga_Default: item.harga_default,
+    let rows = [];
+    if (menu2Items && menu2Items.length > 0) {
+        rows = menu2Items.map(item => {
+            const row = {
+                Kelompok_Menu: item.kelompok_menu,
+                Kode_Item: item.kode_item,
+                Nama_Item: item.nama_item,
+                Status_Aktif: item.status_aktif ? 'Ya' : 'Tidak',
+                Harga_Default: item.harga_default,
+            };
+
+            const itemPrices = prices[item.id] || [];
+            const priceMap = {};
+            itemPrices.forEach(p => {
+                priceMap[p.stand_id] = p.harga;
+            });
+
+            stands.forEach(stand => {
+                row[stand.kode_stand] = priceMap[stand.id] !== undefined ? priceMap[stand.id] : item.harga_default;
+            });
+
+            return row;
+        });
+    } else {
+        const sampleRow = {
+            Kelompok_Menu: 'AMK 27 Menu',
+            Kode_Item: 'AMK_SAMPLE',
+            Nama_Item: 'Contoh Menu AMK',
+            Status_Aktif: 'Ya',
+            Harga_Default: 10000,
         };
-
-        const itemPrices = prices[item.id] || [];
-        const priceMap = {};
-        itemPrices.forEach(p => {
-            priceMap[p.stand_id] = p.harga;
-        });
-
         stands.forEach(stand => {
-            row[stand.kode_stand] = priceMap[stand.id] !== undefined ? priceMap[stand.id] : item.harga_default;
+            sampleRow[stand.kode_stand] = 10000;
         });
-
-        return row;
-    });
+        rows = [sampleRow];
+    }
 
     const ws = XLSX.utils.json_to_sheet(rows);
     XLSX.utils.book_append_sheet(wb, ws, 'Master_Menu2');

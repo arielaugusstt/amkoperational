@@ -121,23 +121,15 @@ export default function Login({ onLoginSuccess }) {
                     {/* Quick Demo Credentials for Fast Testing */}
                     <div className="mt-6 border-t border-neutral-200 pt-5">
                         <p className="text-center text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2.5">
-                            Akun Demo Cepat
+                            Akun Superadmin
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => handleQuickLogin('spg1', '1234')}
-                                className="flex flex-col items-center rounded-xl border border-neutral-300 bg-neutral-50 p-2.5 text-center transition hover:bg-neutral-200/70 hover:border-neutral-400 active:scale-95 cursor-pointer"
-                            >
-                                <span className="text-xs font-black text-neutral-950">SPG 1</span>
-                                <span className="text-[10px] font-medium text-neutral-500">spg1 / 1234</span>
-                            </button>
+                        <div>
                             <button
                                 type="button"
                                 onClick={() => handleQuickLogin('admin', 'admin123')}
-                                className="flex flex-col items-center rounded-xl border border-neutral-950 bg-neutral-950 p-2.5 text-center transition hover:bg-neutral-800 active:scale-95 cursor-pointer text-white"
+                                className="w-full flex flex-col items-center rounded-xl border border-neutral-950 bg-neutral-950 p-2.5 text-center transition hover:bg-neutral-800 active:scale-95 cursor-pointer text-white shadow-sm"
                             >
-                                <span className="text-xs font-black text-white">Super Admin</span>
+                                <span className="text-xs font-black text-white">Super Admin AMK</span>
                                 <span className="text-[10px] font-medium text-neutral-400">admin / admin123</span>
                             </button>
                         </div>

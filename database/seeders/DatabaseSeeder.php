@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Seed Users (Superadmin & SPG)
+        // 1. Seed Users (Superadmin only - SPG accounts created via Master Data or Excel Import)
         User::create([
             'id_spg' => 'ADM-01',
             'name' => 'Super Admin AMK',
@@ -33,26 +33,6 @@ class DatabaseSeeder extends Seeder
             'role' => 'superadmin',
             'status_aktif' => true,
         ]);
-
-        $spgNames = [
-            'Siti Rahma', 'Dewi Lestari', 'Anisa Putri', 'Rina Marlina', 'Fitri Handayani',
-            'Indah Permata', 'Nadia Safitri', 'Dian Kusuma', 'Maya Anggraini', 'Putri Ayu',
-            'Nurul Hidayah', 'Tri Wahyuni', 'Lestari Wulandari', 'Ratna Sari', 'Eka Novita'
-        ];
-
-        foreach ($spgNames as $index => $name) {
-            $num = $index + 1;
-            User::create([
-                'id_spg' => sprintf('SPG-%02d', $num),
-                'name' => $name,
-                'username' => 'spg' . $num,
-                'email' => 'spg' . $num . '@amkoperational.com',
-                'pin_plain' => '1234',
-                'password' => Hash::make('1234'),
-                'role' => 'spg',
-                'status_aktif' => true,
-            ]);
-        }
 
         // 2. Seed Master Stand (Pre-loaded Default 19 Stand)
         $stands = [
@@ -137,83 +117,8 @@ class DatabaseSeeder extends Seeder
         }
 
         // 4. Seed Menu 2 Items & Prices per Stand
-        $menu2Items = [
-            // Kelompok: AMK 27 Menu
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_ORI', 'nama' => 'AMK Original', 'harga' => 10000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_LENGKENG', 'nama' => 'AMK Lengkeng', 'harga' => 14000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_CREAM', 'nama' => 'AMK Cream', 'harga' => 12000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_TEA_POLOS', 'nama' => 'AMK Tea Polos', 'harga' => 10000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_TEA_CREAM', 'nama' => 'AMK Tea Cream', 'harga' => 12000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_POLOS', 'nama' => 'Peach Polos', 'harga' => 12000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_CREAM', 'nama' => 'Peach Cream', 'harga' => 14000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'MOCCA_POLOS', 'nama' => 'Mocca Polos', 'harga' => 12000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'MOCCA_CREAM', 'nama' => 'Mocca Cream', 'harga' => 14000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'KIWI_POLOS', 'nama' => 'Kiwi Polos', 'harga' => 12000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'KIWI_CREAM', 'nama' => 'Kiwi Cream', 'harga' => 14000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_MOCCA_POLOS', 'nama' => 'Peach Mocca Polos', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_MOCCA_CREAM_LIME', 'nama' => 'Peach Mocca Cream Lime', 'harga' => 17000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'KIWI_MOCCA_POLOS', 'nama' => 'Kiwi Mocca Polos', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'KIWI_MOCCA_CREAM_LIME', 'nama' => 'Kiwi Mocca Cream Lime', 'harga' => 17000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_KIWI_POLOS', 'nama' => 'Peach Kiwi Polos', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'PEACH_KIWI_CREAM_LIME', 'nama' => 'Peach Kiwi Cream Lime', 'harga' => 17000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'ORANGE_POLOS', 'nama' => 'Orange Polos', 'harga' => 11000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'LIME_POLOS', 'nama' => 'Lime Polos', 'harga' => 11000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'GUAVA_POLOS', 'nama' => 'Guava Polos', 'harga' => 11000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'OREO_AMK', 'nama' => 'Oreo AMK', 'harga' => 14000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'OREO_CREAM', 'nama' => 'Oreo Cream', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'COFFEE_AMK', 'nama' => 'Coffee AMK', 'harga' => 13000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'COFFEE_CREAM', 'nama' => 'Coffee Cream', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_KURMA_CUP', 'nama' => 'AMK Kurma Cup', 'harga' => 15000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_KURMA_CREAM', 'nama' => 'AMK Kurma Cream', 'harga' => 17000, 'resep' => 'Active'],
-            ['kelompok' => 'AMK 27 Menu', 'kode' => 'AMK_KURMA_LENGKENG', 'nama' => 'AMK Kurma Lengkeng', 'harga' => 19000, 'resep' => 'Active'],
-
-            // Kelompok: Jumbo
-            ['kelompok' => 'Jumbo', 'kode' => 'JUMBO_AMK_ORI', 'nama' => 'AMK Jumbo Original', 'harga' => 16000, 'resep' => 'Active'],
-            ['kelompok' => 'Jumbo', 'kode' => 'JUMBO_AMK_LENGKENG', 'nama' => 'AMK Jumbo Lengkeng', 'harga' => 20000, 'resep' => 'Active'],
-            ['kelompok' => 'Jumbo', 'kode' => 'JUMBO_AMK_TEA', 'nama' => 'AMK Jumbo Tea', 'harga' => 16000, 'resep' => 'Active'],
-            ['kelompok' => 'Jumbo', 'kode' => 'JUMBO_PEACH', 'nama' => 'AMK Jumbo Peach', 'harga' => 18000, 'resep' => 'Active'],
-            ['kelompok' => 'Jumbo', 'kode' => 'JUMBO_MOCCA', 'nama' => 'AMK Jumbo Mocca', 'harga' => 18000, 'resep' => 'Active'],
-
-            // Kelompok: Air Mineral
-            ['kelompok' => 'Air Mineral', 'kode' => 'MINERAL_600ML', 'nama' => 'Air Mineral 600ml', 'harga' => 5000, 'resep' => 'Active'],
-
-            // Kelompok: AMKOPI (Status default Unmapped sesuai spec)
-            ['kelompok' => 'AMKOPI', 'kode' => 'KOPI_AMKOPI_REG', 'nama' => 'AMKopi Regular', 'harga' => 12000, 'resep' => 'Unmapped'],
-            ['kelompok' => 'AMKOPI', 'kode' => 'KOPI_AMKOPI_SUSU', 'nama' => 'AMKopi Susu', 'harga' => 15000, 'resep' => 'Unmapped'],
-            ['kelompok' => 'AMKOPI', 'kode' => 'KOPI_AMKOPI_AREN', 'nama' => 'AMKopi Gula Aren', 'harga' => 16000, 'resep' => 'Unmapped'],
-
-            // Kelompok: PTT
-            ['kelompok' => 'PTT', 'kode' => 'PTT_CUP', 'nama' => 'PTT Cup', 'harga' => 15000, 'resep' => 'Active'],
-        ];
-
+        // 4. Master Menu 2 Items & Prices per Stand (Cleared for user to upload real data via Excel Template 3)
         $createdMenuItems = [];
-        $urutanMenu = 1;
-        foreach ($menu2Items as $mi) {
-            $item = Menu2Item::create([
-                'kelompok_menu' => $mi['kelompok'],
-                'kode_item' => $mi['kode'],
-                'nama_item' => $mi['nama'],
-                'harga_default' => $mi['harga'],
-                'recipe_status' => $mi['resep'],
-                'urutan' => $urutanMenu++,
-                'status_aktif' => true,
-            ]);
-            $createdMenuItems[$mi['kode']] = $item;
-
-            // Generate harga per Stand (Default sama dengan harga_default, TP & Mall Premium bisa disesuaikan)
-            foreach ($createdStands as $stand) {
-                $customHarga = $mi['harga'];
-                // Contoh diferensiasi harga di TP jika diperlukan
-                if (in_array($stand->kode_stand, ['TP 1', 'TP 2', 'TP 3']) && $mi['kelompok'] === 'AMK 27 Menu') {
-                    $customHarga = $mi['harga'] + 1000;
-                }
-                Menu2StandPrice::create([
-                    'menu2_item_id' => $item->id,
-                    'stand_id' => $stand->id,
-                    'harga' => $customHarga,
-                ]);
-            }
-        }
 
         // 5. Seed Master Bahan Baku Menu 3 & RESEPAMK Core
         $ingredients = [

@@ -20,6 +20,18 @@ class AmkOperationalTest extends TestCase
     }
     public function test_login_spg_and_admin_works(): void
     {
+        // Create an SPG for testing
+        User::create([
+            'id_spg' => 'SPG-01',
+            'name' => 'SPG Test',
+            'username' => 'spg1',
+            'email' => 'spg1@amkoperational.com',
+            'pin_plain' => '1234',
+            'password' => \Illuminate\Support\Facades\Hash::make('1234'),
+            'role' => 'spg',
+            'status_aktif' => true,
+        ]);
+
         $res = $this->postJson('/api/login', [
             'username' => 'spg1',
             'password' => '1234',
@@ -39,7 +51,18 @@ class AmkOperationalTest extends TestCase
 
     public function test_initial_data_returns_stands_and_menus(): void
     {
-        $user = User::where('role', 'spg')->first();
+        $user = User::firstOrCreate(
+            ['username' => 'spg_tester'],
+            [
+                'id_spg' => 'SPG-99',
+                'name' => 'SPG Tester',
+                'email' => 'spg_tester@test.com',
+                'pin_plain' => '1234',
+                'password' => \Illuminate\Support\Facades\Hash::make('1234'),
+                'role' => 'spg',
+                'status_aktif' => true,
+            ]
+        );
         $res = $this->actingAs($user)->getJson('/api/initial-data');
         $res->assertStatus(200);
         $res->assertJsonStructure(['stands', 'spg_list', 'menu1_nominals', 'menu1_qtys', 'menu2_items', 'menu2_prices', 'ingredients']);
@@ -47,7 +70,18 @@ class AmkOperationalTest extends TestCase
 
     public function test_menu1_payment_balance_validation(): void
     {
-        $user = User::where('role', 'spg')->first();
+        $user = User::firstOrCreate(
+            ['username' => 'spg_tester'],
+            [
+                'id_spg' => 'SPG-99',
+                'name' => 'SPG Tester',
+                'email' => 'spg_tester@test.com',
+                'pin_plain' => '1234',
+                'password' => \Illuminate\Support\Facades\Hash::make('1234'),
+                'role' => 'spg',
+                'status_aktif' => true,
+            ]
+        );
         $stand = MasterStand::first();
 
         // Failure case: total 1,000,000 but qris 500,000 + tunai 400,000 (selisih 100,000)
@@ -92,7 +126,18 @@ class AmkOperationalTest extends TestCase
 
     public function test_menu2_gatekeeper_and_balance_check(): void
     {
-        $user = User::where('role', 'spg')->first();
+        $user = User::firstOrCreate(
+            ['username' => 'spg_tester'],
+            [
+                'id_spg' => 'SPG-99',
+                'name' => 'SPG Tester',
+                'email' => 'spg_tester@test.com',
+                'pin_plain' => '1234',
+                'password' => \Illuminate\Support\Facades\Hash::make('1234'),
+                'role' => 'spg',
+                'status_aktif' => true,
+            ]
+        );
         $stand2 = MasterStand::skip(1)->first();
 
         // Stand 2 has no Menu 1 for tomorrow: should fail gatekeeper
