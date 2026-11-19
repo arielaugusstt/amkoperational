@@ -227,9 +227,274 @@ class MasterDataController extends Controller
         return response()->json(['success' => true, 'data' => $ing]);
     }
 
+    public function destroyStand($id)
+    {
+        $stand = MasterStand::findOrFail($id);
+        $stand->delete();
+        return response()->json(['success' => true, 'message' => 'Stand berhasil dihapus.']);
+    }
+
+    public function bulkDestroyStand(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        MasterStand::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true, 'message' => count($ids) . ' Stand berhasil dihapus.']);
+    }
+
+    public function destroyAllStands()
+    {
+        $count = MasterStand::count();
+        MasterStand::query()->delete();
+        return response()->json(['success' => true, 'message' => "Seluruh data Stand ({$count}) berhasil dihapus."]);
+    }
+
+    public function destroySPG($id)
+    {
+        $user = User::where('role', 'spg')->findOrFail($id);
+        $user->delete();
+        return response()->json(['success' => true, 'message' => 'Akun SPG berhasil dihapus.']);
+    }
+
+    public function bulkDestroySPG(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        User::where('role', 'spg')->whereIn('id', $ids)->delete();
+        return response()->json(['success' => true, 'message' => count($ids) . ' Akun SPG berhasil dihapus.']);
+    }
+
+    public function destroyAllSPG()
+    {
+        $count = User::where('role', 'spg')->count();
+        User::where('role', 'spg')->delete();
+        return response()->json(['success' => true, 'message' => "Seluruh data SPG ({$count}) berhasil dihapus."]);
+    }
+
+    public function destroyMenu2Item($id)
+    {
+        $item = Menu2Item::findOrFail($id);
+        $item->delete(); // cascade deletes Menu2StandPrice and RecipeMenuMapping
+        return response()->json(['success' => true, 'message' => 'Menu berhasil dihapus.']);
+    }
+
+    public function bulkDestroyMenu2Item(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        Menu2Item::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true, 'message' => count($ids) . ' Menu berhasil dihapus.']);
+    }
+
+    public function destroyAllMenu2Items()
+    {
+        $count = Menu2Item::count();
+        Menu2StandPrice::query()->delete();
+        RecipeMenuMapping::query()->delete();
+        Menu2Item::query()->delete();
+        return response()->json(['success' => true, 'message' => "Seluruh Menu 2 ({$count}) berhasil dihapus."]);
+    }
+
+    public function destroyIngredient($id)
+    {
+        $ing = MasterIngredient::findOrFail($id);
+        $ing->delete();
+        return response()->json(['success' => true, 'message' => 'Bahan baku berhasil dihapus.']);
+    }
+
+    public function bulkDestroyIngredient(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        MasterIngredient::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true, 'message' => count($ids) . ' Bahan baku berhasil dihapus.']);
+    }
+
+    public function destroyAllIngredients()
+    {
+        $count = MasterIngredient::count();
+        StandIngredientStock::query()->delete();
+        MasterIngredient::query()->delete();
+        return response()->json(['success' => true, 'message' => "Seluruh Bahan Baku ({$count}) berhasil dihapus."]);
+    }
+
+    // Menu 1 Config CRUD
+    public function createMenu1Nominal(Request $request)
+    {
+        $request->validate(['kode_kategori' => 'required|unique:menu1_nominal_configs,kode_kategori', 'label_input_nominal' => 'required']);
+        $nom = Menu1NominalConfig::create([
+            'kode_kategori' => $request->input('kode_kategori'),
+            'label_input_nominal' => $request->input('label_input_nominal'),
+            'keterangan_bantu' => $request->input('keterangan_bantu'),
+            'urutan' => (int)$request->input('urutan', Menu1NominalConfig::max('urutan') + 1),
+            'status_aktif' => (bool)$request->input('status_aktif', true),
+        ]);
+        return response()->json(['success' => true, 'data' => $nom]);
+    }
+
+    public function updateMenu1Nominal(Request $request, $id)
+    {
+        $nom = Menu1NominalConfig::findOrFail($id);
+        $nom->update($request->only(['label_input_nominal', 'keterangan_bantu', 'urutan', 'status_aktif']));
+        return response()->json(['success' => true, 'data' => $nom]);
+    }
+
+    public function destroyMenu1Nominal($id)
+    {
+        Menu1NominalConfig::findOrFail($id)->delete();
+        return response()->json(['success' => true, 'message' => 'Kategori nominal berhasil dihapus.']);
+    }
+
+    public function createMenu1Qty(Request $request)
+    {
+        $request->validate(['kode_qty_menu1' => 'required|unique:menu1_qty_configs,kode_qty_menu1', 'label_input_qty' => 'required']);
+        $qty = Menu1QtyConfig::create([
+            'kode_qty_menu1' => $request->input('kode_qty_menu1'),
+            'label_input_qty' => $request->input('label_input_qty'),
+            'urutan' => (int)$request->input('urutan', Menu1QtyConfig::max('urutan') + 1),
+            'status_aktif' => (bool)$request->input('status_aktif', true),
+        ]);
+        return response()->json(['success' => true, 'data' => $qty]);
+    }
+
+    public function updateMenu1Qty(Request $request, $id)
+    {
+        $qty = Menu1QtyConfig::findOrFail($id);
+        $qty->update($request->only(['label_input_qty', 'urutan', 'status_aktif']));
+        return response()->json(['success' => true, 'data' => $qty]);
+    }
+
+    public function destroyMenu1Qty($id)
+    {
+        Menu1QtyConfig::findOrFail($id)->delete();
+        return response()->json(['success' => true, 'message' => 'Item QTY berhasil dihapus.']);
+    }
+
+    public function destroyAllMenu1(Request $request)
+    {
+        $target = $request->input('target', 'all'); // 'nominal', 'qty', 'all'
+        if ($target === 'nominal' || $target === 'all') {
+            Menu1NominalConfig::query()->delete();
+        }
+        if ($target === 'qty' || $target === 'all') {
+            Menu1QtyConfig::query()->delete();
+        }
+        return response()->json(['success' => true, 'message' => 'Konfigurasi Menu 1 berhasil dikosongkan.']);
+    }
+
+    // Master Resep CRUD
+    public function createBatch(Request $request)
+    {
+        $request->validate(['kode_batch' => 'required', 'nama_batch' => 'required', 'volume_batch_ml' => 'required|numeric']);
+        $batch = RecipeBatch::create([
+            'kode_batch' => $request->input('kode_batch'),
+            'nama_batch' => $request->input('nama_batch'),
+            'volume_batch_ml' => (float)$request->input('volume_batch_ml'),
+            'effective_date' => $request->input('effective_date', '2026-01-01'),
+            'keterangan' => $request->input('keterangan'),
+            'status_aktif' => true,
+        ]);
+
+        $comps = $request->input('components', []);
+        foreach ($comps as $c) {
+            RecipeBatchComponent::create([
+                'recipe_batch_id' => $batch->id,
+                'tipe_komponen' => $c['tipe_komponen'] ?? 'raw_ingredient',
+                'kode_referensi' => $c['kode_referensi'],
+                'nama_komponen' => $c['nama_komponen'] ?? $c['kode_referensi'],
+                'jumlah' => (float)($c['jumlah'] ?? 0),
+                'satuan' => $c['satuan'] ?? 'ml',
+            ]);
+        }
+
+        return response()->json(['success' => true, 'data' => $batch->load('components')]);
+    }
+
+    public function updateBatch(Request $request, $id)
+    {
+        $batch = RecipeBatch::findOrFail($id);
+        $batch->update($request->only(['nama_batch', 'volume_batch_ml', 'effective_date', 'keterangan', 'status_aktif']));
+
+        if ($request->has('components')) {
+            $batch->components()->delete();
+            $comps = $request->input('components', []);
+            foreach ($comps as $c) {
+                RecipeBatchComponent::create([
+                    'recipe_batch_id' => $batch->id,
+                    'tipe_komponen' => $c['tipe_komponen'] ?? 'raw_ingredient',
+                    'kode_referensi' => $c['kode_referensi'],
+                    'nama_komponen' => $c['nama_komponen'] ?? $c['kode_referensi'],
+                    'jumlah' => (float)($c['jumlah'] ?? 0),
+                    'satuan' => $c['satuan'] ?? 'ml',
+                ]);
+            }
+        }
+
+        return response()->json(['success' => true, 'data' => $batch->load('components')]);
+    }
+
+    public function destroyBatch($id)
+    {
+        $batch = RecipeBatch::findOrFail($id);
+        $batch->delete(); // cascade components
+        return response()->json(['success' => true, 'message' => 'Batch dapur berhasil dihapus.']);
+    }
+
+    public function destroyAllBatches()
+    {
+        RecipeBatchComponent::query()->delete();
+        RecipeBatch::query()->delete();
+        return response()->json(['success' => true, 'message' => 'Seluruh rumus batch dapur berhasil dihapus.']);
+    }
+
+    public function createMapping(Request $request)
+    {
+        $request->validate([
+            'menu2_item_id' => 'required|exists:menu2_items,id',
+            'kode_referensi' => 'required',
+            'nilai_takaran' => 'required|numeric',
+        ]);
+
+        $map = RecipeMenuMapping::create([
+            'menu2_item_id' => $request->input('menu2_item_id'),
+            'tipe_komponen' => $request->input('tipe_komponen', 'batch_adonan'),
+            'kode_referensi' => $request->input('kode_referensi'),
+            'mode_takaran' => $request->input('mode_takaran', 'percent_vol_reg'),
+            'nilai_takaran' => (float)$request->input('nilai_takaran'),
+            'satuan' => $request->input('satuan', 'ml'),
+            'effective_date' => $request->input('effective_date', '2026-01-01'),
+        ]);
+
+        return response()->json(['success' => true, 'data' => $map]);
+    }
+
+    public function updateMapping(Request $request, $id)
+    {
+        $map = RecipeMenuMapping::findOrFail($id);
+        $map->update($request->only(['tipe_komponen', 'kode_referensi', 'mode_takaran', 'nilai_takaran', 'satuan', 'effective_date']));
+        return response()->json(['success' => true, 'data' => $map]);
+    }
+
+    public function destroyMapping($id)
+    {
+        RecipeMenuMapping::findOrFail($id)->delete();
+        return response()->json(['success' => true, 'message' => 'Mapping resep berhasil dihapus.']);
+    }
+
+    public function bulkDestroyMapping(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        RecipeMenuMapping::whereIn('id', $ids)->delete();
+        return response()->json(['success' => true, 'message' => count($ids) . ' Mapping resep berhasil dihapus.']);
+    }
+
+    public function destroyAllMappings()
+    {
+        $count = RecipeMenuMapping::count();
+        RecipeMenuMapping::query()->delete();
+        return response()->json(['success' => true, 'message' => "Seluruh mapping resep ({$count}) berhasil dihapus."]);
+    }
+
     public function importMasterData(Request $request)
     {
         $type = $request->input('template_type'); // template1, template2, template3, template4
+        $importMode = $request->input('import_mode', 'append'); // 'replace' | 'append'
         $payload = $request->input('payload'); // parsed sheets array/objects from SheetJS
 
         if (!$payload || !is_array($payload)) {
@@ -239,6 +504,15 @@ class MasterDataController extends Controller
         DB::beginTransaction();
         try {
             if ($type === 'template1') {
+                if ($importMode === 'replace') {
+                    if (!empty($payload['Master_Stand'])) {
+                        MasterStand::query()->delete();
+                    }
+                    if (!empty($payload['Master_SPG'])) {
+                        User::where('role', 'spg')->delete();
+                    }
+                }
+
                 // Sheet 1: Master_Stand
                 if (!empty($payload['Master_Stand'])) {
                     foreach ($payload['Master_Stand'] as $row) {
@@ -251,10 +525,10 @@ class MasterDataController extends Controller
                                 'wilayah_laporan' => $row['Wilayah_Laporan'] ?? 'Utara',
                                 'blok_wa' => $row['Blok_WA'] ?? 'Blok 1',
                                 'urutan_tampil' => (int)($row['Urutan_Tampil'] ?? 1),
-                                'punya_amkopi' => strtolower(trim($row['Punya_AMKopi'] ?? '')) === 'ya',
-                                'tampilkan_csdng_wa' => strtolower(trim($row['Tampilkan_Csdng_WA'] ?? '')) === 'ya',
-                                'tampilkan_ptt_wa' => strtolower(trim($row['Tampilkan_PTT_WA'] ?? '')) === 'ya',
-                                'status_aktif' => strtolower(trim($row['Status_Aktif'] ?? 'ya')) !== 'tidak',
+                                'punya_amkopi' => strtolower(trim((string)($row['Punya_AMKopi'] ?? ''))) === 'ya',
+                                'tampilkan_csdng_wa' => strtolower(trim((string)($row['Tampilkan_Csdng_WA'] ?? ''))) === 'ya',
+                                'tampilkan_ptt_wa' => strtolower(trim((string)($row['Tampilkan_PTT_WA'] ?? ''))) === 'ya',
+                                'status_aktif' => strtolower(trim((string)($row['Status_Aktif'] ?? 'ya'))) !== 'tidak',
                             ]
                         );
                     }
@@ -273,7 +547,46 @@ class MasterDataController extends Controller
                                 'pin_plain' => $pin,
                                 'password' => Hash::make($pin),
                                 'role' => 'spg',
-                                'status_aktif' => strtolower(trim($row['Status_Aktif'] ?? 'ya')) !== 'tidak',
+                                'status_aktif' => strtolower(trim((string)($row['Status_Aktif'] ?? 'ya'))) !== 'tidak',
+                            ]
+                        );
+                    }
+                }
+            } elseif ($type === 'template2') {
+                if ($importMode === 'replace') {
+                    if (!empty($payload['Kategori_Nominal_Menu1'])) {
+                        Menu1NominalConfig::query()->delete();
+                    }
+                    if (!empty($payload['Item_QTY_Menu1'])) {
+                        Menu1QtyConfig::query()->delete();
+                    }
+                }
+
+                if (!empty($payload['Kategori_Nominal_Menu1'])) {
+                    foreach ($payload['Kategori_Nominal_Menu1'] as $row) {
+                        $kode = trim($row['Kode_Kategori'] ?? '');
+                        if (!$kode) continue;
+                        Menu1NominalConfig::updateOrCreate(
+                            ['kode_kategori' => $kode],
+                            [
+                                'label_input_nominal' => $row['Label_Input_Nominal'] ?? $kode,
+                                'urutan' => (int)($row['Urutan'] ?? 1),
+                                'status_aktif' => strtolower(trim((string)($row['Status_Aktif'] ?? 'ya'))) !== 'tidak',
+                            ]
+                        );
+                    }
+                }
+
+                if (!empty($payload['Item_QTY_Menu1'])) {
+                    foreach ($payload['Item_QTY_Menu1'] as $row) {
+                        $kode = trim($row['Kode_QTY_Menu1'] ?? '');
+                        if (!$kode) continue;
+                        Menu1QtyConfig::updateOrCreate(
+                            ['kode_qty_menu1' => $kode],
+                            [
+                                'label_input_qty' => $row['Label_Input_QTY'] ?? $kode,
+                                'urutan' => (int)($row['Urutan'] ?? 1),
+                                'status_aktif' => strtolower(trim((string)($row['Status_Aktif'] ?? 'ya'))) !== 'tidak',
                             ]
                         );
                     }
@@ -282,6 +595,12 @@ class MasterDataController extends Controller
                 // Master Menu & Harga Stand
                 $sheetData = $payload['Master_Menu2'] ?? $payload['Sheet1'] ?? reset($payload);
                 if (!empty($sheetData)) {
+                    if ($importMode === 'replace') {
+                        Menu2StandPrice::query()->delete();
+                        RecipeMenuMapping::query()->delete();
+                        Menu2Item::query()->delete();
+                    }
+
                     $stands = MasterStand::all()->keyBy('kode_stand');
                     foreach ($sheetData as $row) {
                         $kode = trim($row['Kode_Item'] ?? '');
@@ -292,7 +611,7 @@ class MasterDataController extends Controller
                                 'kelompok_menu' => $row['Kelompok_Menu'] ?? 'AMK 27 Menu',
                                 'nama_item' => $row['Nama_Item'] ?? $kode,
                                 'harga_default' => (int)($row['Harga_Default'] ?? 0),
-                                'status_aktif' => strtolower(trim($row['Status_Aktif'] ?? 'ya')) !== 'tidak',
+                                'status_aktif' => strtolower(trim((string)($row['Status_Aktif'] ?? 'ya'))) !== 'tidak',
                             ]
                         );
                         foreach ($stands as $standKode => $stand) {
@@ -305,10 +624,141 @@ class MasterDataController extends Controller
                         }
                     }
                 }
+            } elseif ($type === 'template4') {
+                // Master Bahan Baku & Resep
+                if ($importMode === 'replace') {
+                    if (!empty($payload['Master_Bahan_Menu3'])) {
+                        StandIngredientStock::query()->delete();
+                        MasterIngredient::query()->delete();
+                    }
+                    if (!empty($payload['Parameter_Global_Resep'])) {
+                        RecipeGlobalParam::query()->delete();
+                    }
+                    if (!empty($payload['Rumus_Batch_Dapur'])) {
+                        RecipeBatchComponent::query()->delete();
+                        RecipeBatch::query()->delete();
+                    }
+                    if (!empty($payload['Mapping_Resep_Menu2'])) {
+                        RecipeMenuMapping::query()->delete();
+                    }
+                }
+
+                // Sheet 1: Master_Bahan_Menu3
+                if (!empty($payload['Master_Bahan_Menu3'])) {
+                    foreach ($payload['Master_Bahan_Menu3'] as $row) {
+                        $kode = trim($row['Kode_Bahan'] ?? '');
+                        if (!$kode) continue;
+                        MasterIngredient::updateOrCreate(
+                            ['kode_bahan' => $kode],
+                            [
+                                'kategori_bahan' => $row['Kategori_Bahan'] ?? 'Bahan Baku',
+                                'nama_bahan_baku' => $row['Nama_Bahan_Baku'] ?? $kode,
+                                'satuan' => $row['Satuan'] ?? 'ml',
+                                'link_kode_qty_menu1' => !empty($row['Link_Kode_QTY_Menu1']) ? trim($row['Link_Kode_QTY_Menu1']) : null,
+                                'status_aktif' => true,
+                            ]
+                        );
+                    }
+                }
+
+                // Sheet 2: Parameter_Global_Resep
+                if (!empty($payload['Parameter_Global_Resep'])) {
+                    foreach ($payload['Parameter_Global_Resep'] as $row) {
+                        $key = trim($row['Param_Key'] ?? '');
+                        if (!$key) continue;
+                        RecipeGlobalParam::create([
+                            'param_key' => $key,
+                            'nama_parameter' => $row['Nama_Parameter'] ?? $key,
+                            'nilai_param' => (float)($row['Nilai'] ?? 185),
+                            'satuan' => $row['Satuan'] ?? 'ml',
+                            'effective_date' => $row['Effective_Date'] ?? '2026-01-01',
+                            'keterangan' => $row['Keterangan'] ?? null,
+                            'status_aktif' => true,
+                        ]);
+                    }
+                }
+
+                // Sheet 3: Rumus_Batch_Dapur
+                if (!empty($payload['Rumus_Batch_Dapur'])) {
+                    $groupedBatches = [];
+                    foreach ($payload['Rumus_Batch_Dapur'] as $row) {
+                        $batchCode = trim($row['Kode_Batch'] ?? '');
+                        if (!$batchCode) continue;
+                        if (!isset($groupedBatches[$batchCode])) {
+                            $groupedBatches[$batchCode] = [
+                                'nama_batch' => $row['Nama_Batch'] ?? $batchCode,
+                                'volume' => (float)($row['Volume_Batch_ML'] ?? 1000),
+                                'components' => [],
+                            ];
+                        }
+                        if (!empty($row['Kode_Referensi'])) {
+                            $groupedBatches[$batchCode]['components'][] = [
+                                'tipe_komponen' => $row['Tipe_Komponen'] ?? 'raw_ingredient',
+                                'kode_referensi' => $row['Kode_Referensi'],
+                                'nama_komponen' => $row['Nama_Komponen'] ?? $row['Kode_Referensi'],
+                                'jumlah' => (float)($row['Jumlah'] ?? 0),
+                                'satuan' => $row['Satuan'] ?? 'ml',
+                            ];
+                        }
+                    }
+
+                    foreach ($groupedBatches as $batchCode => $bData) {
+                        $batch = RecipeBatch::updateOrCreate(
+                            ['kode_batch' => $batchCode],
+                            [
+                                'nama_batch' => $bData['nama_batch'],
+                                'volume_batch_ml' => $bData['volume'],
+                                'effective_date' => '2026-01-01',
+                                'status_aktif' => true,
+                            ]
+                        );
+                        $batch->components()->delete();
+                        foreach ($bData['components'] as $comp) {
+                            RecipeBatchComponent::create([
+                                'recipe_batch_id' => $batch->id,
+                                'tipe_komponen' => $comp['tipe_komponen'],
+                                'kode_referensi' => $comp['kode_referensi'],
+                                'nama_komponen' => $comp['nama_komponen'],
+                                'jumlah' => $comp['jumlah'],
+                                'satuan' => $comp['satuan'],
+                            ]);
+                        }
+                    }
+                }
+
+                // Sheet 4: Mapping_Resep_Menu2
+                if (!empty($payload['Mapping_Resep_Menu2'])) {
+                    $menuItems = Menu2Item::all()->keyBy('kode_item');
+                    foreach ($payload['Mapping_Resep_Menu2'] as $row) {
+                        $itemCode = trim($row['Kode_Item'] ?? '');
+                        $itemId = $row['Menu2_Item_ID'] ?? null;
+                        $targetItem = null;
+                        if ($itemCode && isset($menuItems[$itemCode])) {
+                            $targetItem = $menuItems[$itemCode];
+                        } elseif ($itemId) {
+                            $targetItem = Menu2Item::find($itemId);
+                        }
+
+                        if ($targetItem && !empty($row['Kode_Referensi'])) {
+                            RecipeMenuMapping::create([
+                                'menu2_item_id' => $targetItem->id,
+                                'tipe_komponen' => $row['Tipe_Komponen'] ?? 'batch_adonan',
+                                'kode_referensi' => $row['Kode_Referensi'],
+                                'mode_takaran' => $row['Mode_Takaran'] ?? 'percent_vol_reg',
+                                'nilai_takaran' => (float)($row['Nilai_Takaran'] ?? 0),
+                                'satuan' => $row['Satuan'] ?? 'ml',
+                                'effective_date' => $row['Effective_Date'] ?? '2026-01-01',
+                            ]);
+                        }
+                    }
+                }
             }
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Import Master Data berhasil diproses!']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Import Master Data (' . strtoupper($importMode) . ') berhasil diproses!'
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Gagal import: ' . $e->getMessage()], 500);

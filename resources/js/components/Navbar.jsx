@@ -54,7 +54,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                             className={`flex items-center space-x-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${activeTab === 'admin_reverse' ? 'bg-amber-50 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}
                         >
                             <FlaskConical className="h-4 w-4" />
-                            <span>RESEPAMK</span>
+                            <span>Reverse Analytic & Audit Resep</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('admin_opname')}
@@ -110,7 +110,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                         onClick={() => setActiveTab('admin_reverse')}
                         className={`whitespace-nowrap px-3 py-1.5 rounded-lg transition ${activeTab === 'admin_reverse' ? 'bg-amber-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
                     >
-                        RESEPAMK
+                        Reverse Analytic & Audit Resep
                     </button>
                     <button
                         onClick={() => setActiveTab('admin_opname')}

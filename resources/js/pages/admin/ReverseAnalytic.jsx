@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     FlaskConical, Calendar, Store, RefreshCw, AlertTriangle,
-    CheckCircle2, Clock, Settings, ArrowRight, Layers
+    CheckCircle2, Clock, Settings, ArrowRight, Layers, Download
 } from 'lucide-react';
 import { formatDateIndo } from '../../utils/formatters';
+import { exportAuditReport } from '../../utils/excelEngine';
 
 export default function ReverseAnalytic({ stands = [], tanggal }) {
     const [selectedStandId, setSelectedStandId] = useState('all');
@@ -14,6 +15,7 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
 
     // Recipe Parameter Change Modal / Form
     const [showParamModal, setShowParamModal] = useState(false);
+    const [paramKey, setParamKey] = useState('VOL_REG');
     const [newVolReg, setNewVolReg] = useState('185');
     const [effectiveDate, setEffectiveDate] = useState(tanggal);
     const [savingParam, setSavingParam] = useState(false);
@@ -41,6 +43,8 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
         setSavingParam(true);
         setParamMsg('');
 
+        const paramName = paramKey === 'VOL_CUP_JUMBO' ? 'Volume Saji Jumbo per Cup' : 'Volume Saji Reguler per Cup';
+
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             const res = await fetch('/api/admin/update-recipe-param', {
@@ -51,12 +55,12 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
                     'X-CSRF-TOKEN': csrfToken || '',
                 },
                 body: JSON.stringify({
-                    param_key: 'VOL_REG',
-                    nama_parameter: 'Volume Saji Reguler per Cup',
-                    nilai_param: parseFloat(newVolReg) || 185.0,
+                    param_key: paramKey,
+                    nama_parameter: paramName,
+                    nilai_param: parseFloat(newVolReg) || (paramKey === 'VOL_CUP_JUMBO' ? 350.0 : 185.0),
                     satuan: 'ml',
                     effective_date: effectiveDate,
-                    keterangan: `Revisi parameter volume saji menjadi ${newVolReg} ml mulai ${effectiveDate}`,
+                    keterangan: `Revisi parameter ${paramKey} menjadi ${newVolReg} ml mulai ${effectiveDate}`,
                 }),
             });
 
@@ -73,6 +77,16 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
         } finally {
             setSavingParam(false);
         }
+    };
+
+    const handleExportAudit = () => {
+        if (!table2 || table2.length === 0) {
+            alert('Tidak ada data audit untuk diexport');
+            return;
+        }
+        const standObj = stands.find(s => String(s.id) === String(selectedStandId));
+        const standNama = standObj ? standObj.nama_stand : (selectedStandId === 'all' ? 'Semua Stand' : 'Stand');
+        exportAuditReport(table2, `${startDate}_sd_${endDate}`, standNama);
     };
 
     const table1 = analyticData?.table1_batch_needs || [];
@@ -130,8 +144,18 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
                     <button
                         onClick={fetchAnalytic}
                         className="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 hover:text-amber-600 active:scale-95 shadow-xs"
+                        title="Segarkan Data"
                     >
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+
+                    <button
+                        onClick={handleExportAudit}
+                        className="flex items-center space-x-1.5 rounded-2xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-700 active:scale-95"
+                        title="Download Sheet Audit Excel"
+                    >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Export Excel</span>
                     </button>
 
                     <button
@@ -215,9 +239,19 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
                                         {row.teoritis.toLocaleString('id-ID')}
+                                        {row.teoritis_desc && (
+                                            <span className="block text-[10px] text-amber-700 font-sans font-semibold">
+                                                {row.teoritis_desc}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
                                         {row.aktual.toLocaleString('id-ID')}
+                                        {row.aktual_desc && (
+                                            <span className="block text-[10px] text-emerald-700 font-sans font-semibold">
+                                                {row.aktual_desc}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className={`px-4 py-3 text-right font-mono font-bold ${row.selisih === 0 ? 'text-slate-500' : row.selisih > 0 ? 'text-amber-700' : 'text-blue-700'}`}>
                                         {row.selisih > 0 ? `+${row.selisih.toLocaleString('id-ID')}` : row.selisih.toLocaleString('id-ID')}
@@ -277,7 +311,22 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
                         <form onSubmit={handleSaveParam} className="space-y-3.5">
                             <div>
                                 <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
-                                    Volume Reguler per Cup (`VOL_REG`)
+                                    Pilih Parameter Resep
+                                </label>
+                                <select
+                                    value={paramKey}
+                                    onChange={(e) => {
+                                        setParamKey(e.target.value);
+                                        setNewVolReg(e.target.value === 'VOL_CUP_JUMBO' ? '350' : '185');
+                                    }}
+                                    className="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-900 mb-3"
+                                >
+                                    <option value="VOL_REG">Volume Saji Standar / Reguler (VOL_REG / VOL_CUP_STD)</option>
+                                    <option value="VOL_CUP_JUMBO">Volume Saji Jumbo (VOL_CUP_JUMBO)</option>
+                                </select>
+
+                                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                                    Nilai Volume Cup ({paramKey})
                                 </label>
                                 <div className="flex items-center space-x-2">
                                     <input
@@ -286,34 +335,55 @@ export default function ReverseAnalytic({ stands = [], tanggal }) {
                                         required
                                         value={newVolReg}
                                         onChange={(e) => setNewVolReg(e.target.value)}
-                                        placeholder="185"
+                                        placeholder={paramKey === 'VOL_CUP_JUMBO' ? '350' : '185'}
                                         className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm font-bold text-slate-900"
                                     />
                                     <span className="text-xs font-bold text-slate-500">ml</span>
                                 </div>
                                 <div className="flex items-center space-x-2 mt-1.5">
                                     <span className="text-[10px] text-slate-400 font-semibold">Opsi cepat:</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewVolReg('185')}
-                                        className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
-                                    >
-                                        185 ml (Default)
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewVolReg('190')}
-                                        className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
-                                    >
-                                        190 ml
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setNewVolReg('170')}
-                                        className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
-                                    >
-                                        170 ml
-                                    </button>
+                                    {paramKey === 'VOL_CUP_JUMBO' ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewVolReg('350')}
+                                                className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                                            >
+                                                350 ml (Default Jumbo)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewVolReg('400')}
+                                                className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                                            >
+                                                400 ml
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewVolReg('185')}
+                                                className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                                            >
+                                                185 ml (Default)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewVolReg('190')}
+                                                className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                                            >
+                                                190 ml
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewVolReg('170')}
+                                                className="rounded-md border border-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:bg-slate-100"
+                                            >
+                                                170 ml
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
 

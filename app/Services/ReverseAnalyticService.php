@@ -40,11 +40,17 @@ class ReverseAnalyticService
 
         // 3. Fetch Recipe Parameters active for target date
         $targetDate = $endDate; // use the effective date threshold for the period
-        $volRegParam = RecipeGlobalParam::where('param_key', 'VOL_REG')
+        $volRegParam = RecipeGlobalParam::whereIn('param_key', ['VOL_CUP_STD', 'VOL_REG'])
             ->where('effective_date', '<=', $targetDate)
             ->orderBy('effective_date', 'desc')
             ->first();
         $volReg = $volRegParam ? (float)$volRegParam->nilai_param : 185.0;
+
+        $volJumboParam = RecipeGlobalParam::where('param_key', 'VOL_CUP_JUMBO')
+            ->where('effective_date', '<=', $targetDate)
+            ->orderBy('effective_date', 'desc')
+            ->first();
+        $volJumbo = $volJumboParam ? (float)$volJumboParam->nilai_param : 350.0;
 
         // Fetch batches active
         $batches = RecipeBatch::with('components')
@@ -77,12 +83,15 @@ class ReverseAnalyticService
                 continue; // Skip unmapped like AMKopi
             }
 
+            $isJumbo = str_contains(strtolower($menuItem->kelompok_menu ?? ''), 'jumbo') || str_contains(strtolower($menuItem->nama_item ?? ''), 'jumbo');
+            $baseCupVol = $isJumbo ? $volJumbo : $volReg;
+
             foreach ($menuItem->recipeMappings as $mapping) {
                 if ($mapping->tipe_komponen === 'batch_adonan') {
                     $batchCode = $mapping->kode_referensi;
                     $volumeMl = 0.0;
-                    if ($mapping->mode_takaran === 'percent_vol_reg') {
-                        $volumeMl = ($mapping->nilai_takaran / 100.0) * $volReg;
+                    if ($mapping->mode_takaran === 'percent_vol_reg' || $mapping->mode_takaran === 'percent') {
+                        $volumeMl = ($mapping->nilai_takaran / 100.0) * $baseCupVol;
                     } else {
                         $volumeMl = (float)$mapping->nilai_takaran;
                     }
@@ -166,11 +175,35 @@ class ReverseAnalyticService
         $masterIngredients = MasterIngredient::where('is_resep_amk_core', true)
             ->orWhereIn('kode_bahan', array_keys($teoritisRaw))
             ->orderBy('urutan')
-            ->get();
+            ->get()
+            ->keyBy('kode_bahan');
+
+        // Standard 13 Core ingredients defined in RESEPAMK spec
+        $core13 = [
+            'SYRUP_AMK' => ['nama' => 'Sirup Biang AMK / Syrup AMK', 'satuan' => 'ml'],
+            'TEA_BAG' => ['nama' => 'Tea Bag / Teh Celup', 'satuan' => 'bag'],
+            'GULA_PASIR' => ['nama' => 'Gula Pasir', 'satuan' => 'ml'],
+            'PREMIX_PEACH' => ['nama' => 'Sirup Premix Peach', 'satuan' => 'ml'],
+            'PREMIX_MOCCA' => ['nama' => 'Sirup Premix Mocca', 'satuan' => 'ml'],
+            'PREMIX_KIWI' => ['nama' => 'Sirup Premix Kiwi', 'satuan' => 'ml'],
+            'CREAMER' => ['nama' => 'Creamer', 'satuan' => 'ml'],
+            'COFFEE' => ['nama' => 'Coffee', 'satuan' => 'ml'],
+            'PERASA_ORANGE' => ['nama' => 'Perasa Orange', 'satuan' => 'ml'],
+            'PERASA_LIME' => ['nama' => 'Perasa Lime', 'satuan' => 'ml'],
+            'PERASA_GUAVA' => ['nama' => 'Perasa Guava', 'satuan' => 'ml'],
+            'OREO' => ['nama' => 'Oreo', 'satuan' => 'pcs'],
+            'LENGKENG' => ['nama' => 'Lengkeng', 'satuan' => 'porsi'],
+        ];
+
+        // Merge any additional core ingredients from database
+        $allBahanCodes = array_unique(array_merge(array_keys($core13), $masterIngredients->keys()->toArray()));
 
         $auditTable = [];
-        foreach ($masterIngredients as $ing) {
-            $code = $ing->kode_bahan;
+        foreach ($allBahanCodes as $code) {
+            $ing = $masterIngredients->get($code);
+            $nama = $ing ? $ing->nama_bahan_baku : ($core13[$code]['nama'] ?? $code);
+            $satuan = $ing ? $ing->satuan : ($core13[$code]['satuan'] ?? 'ml');
+
             $teoritis = (float)($teoritisRaw[$code] ?? 0);
             $aktual = (float)($actualUsage[$code] ?? 0);
             $selisih = $aktual - $teoritis;
@@ -182,7 +215,7 @@ class ReverseAnalyticService
                 $deviasiPercent = 100.0;
             }
 
-            // Status: Hijau <=5%, Kuning 5-10%, Merah >10%
+            // Status: Hijau <=5%, Kuning 5.1-10%, Merah >10%
             $status = 'Hijau';
             $badgeColor = 'green';
             if ($deviasiPercent > 10.0) {
@@ -196,12 +229,26 @@ class ReverseAnalyticService
                 $badgeColor = 'green';
             }
 
+            $teoritisDesc = (string)round($teoritis, 2);
+            $aktualDesc = (string)round($aktual, 2);
+            if ($code === 'GULA_PASIR') {
+                $teoritisSdt = round($teoritis * 0.07, 1);
+                $aktualSdt = round($aktual * 0.07, 1);
+                $teoritisDesc .= " ml (~{$teoritisSdt} sdt)";
+                $aktualDesc .= " ml (~{$aktualSdt} sdt)";
+            } else {
+                $teoritisDesc .= " {$satuan}";
+                $aktualDesc .= " {$satuan}";
+            }
+
             $auditTable[] = [
                 'kode_bahan' => $code,
-                'nama_bahan_baku' => $ing->nama_bahan_baku,
-                'satuan' => $ing->satuan,
+                'nama_bahan_baku' => $nama,
+                'satuan' => $satuan,
                 'teoritis' => $teoritis,
+                'teoritis_desc' => $teoritisDesc,
                 'aktual' => $aktual,
+                'aktual_desc' => $aktualDesc,
                 'selisih' => round($selisih, 2),
                 'deviasi_percent' => $deviasiPercent,
                 'status' => $status,
@@ -224,6 +271,8 @@ class ReverseAnalyticService
             'start_date' => $startDate,
             'end_date' => $endDate,
             'vol_reg_used' => $volReg,
+            'vol_std_used' => $volReg,
+            'vol_jumbo_used' => $volJumbo,
             'total_items_sold' => $totalItemsSold,
             'table1_batch_needs' => $table1BatchNeeds,
             'table2_audit_comparison' => $auditTable,

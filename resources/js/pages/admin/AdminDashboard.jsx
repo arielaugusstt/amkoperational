@@ -34,9 +34,15 @@ export default function AdminDashboard({ tanggal, setTanggal, onNavigate }) {
         fetchStats();
     }, [tanggal]);
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (!stats) return;
-        exportComprehensiveReport(stats.summary, stats.stands_progress, tanggal);
+        try {
+            const revRes = await fetch(`/api/admin/reverse-analytic?stand_id=all&start_date=${tanggal}&end_date=${tanggal}`);
+            const revData = await revRes.json();
+            exportComprehensiveReport(stats.summary, stats.stands_progress, tanggal, revData.table2_audit_comparison || []);
+        } catch (e) {
+            exportComprehensiveReport(stats.summary, stats.stands_progress, tanggal, []);
+        }
     };
 
     const clearLocalDrafts = () => {
@@ -297,8 +303,8 @@ export default function AdminDashboard({ tanggal, setTanggal, onNavigate }) {
                     className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 hover:border-blue-500 hover:shadow-md transition flex items-center justify-between"
                 >
                     <div>
-                        <h4 className="text-xs font-black text-slate-900 uppercase">Reverse Analytic (RESEPAMK)</h4>
-                        <p className="text-[11px] text-slate-500">Audit bahan teoritis vs terpakai aktual</p>
+                        <h4 className="text-xs font-black text-slate-900 uppercase">Reverse Analytic & Audit Resep</h4>
+                        <p className="text-[11px] text-slate-500">Audit bahan teoritis (Menu 2) vs aktual (Menu 3)</p>
                     </div>
                     <ChevronRight className="h-5 w-5 text-slate-400" />
                 </div>

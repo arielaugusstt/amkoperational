@@ -45,12 +45,47 @@ Route::prefix('api')->group(function () {
     Route::get('/master-data', [MasterDataController::class, 'getFullMaster']);
     Route::post('/master-data/stand', [MasterDataController::class, 'createStand']);
     Route::put('/master-data/stand/{id}', [MasterDataController::class, 'updateStand']);
+    Route::delete('/master-data/stand/{id}', [MasterDataController::class, 'destroyStand']);
+    Route::post('/master-data/stand/bulk-delete', [MasterDataController::class, 'bulkDestroyStand']);
+    Route::post('/master-data/stand/delete-all', [MasterDataController::class, 'destroyAllStands']);
+
     Route::post('/master-data/spg', [MasterDataController::class, 'createSPG']);
     Route::put('/master-data/spg/{id}', [MasterDataController::class, 'updateSPG']);
+    Route::delete('/master-data/spg/{id}', [MasterDataController::class, 'destroySPG']);
+    Route::post('/master-data/spg/bulk-delete', [MasterDataController::class, 'bulkDestroySPG']);
+    Route::post('/master-data/spg/delete-all', [MasterDataController::class, 'destroyAllSPG']);
+
     Route::post('/master-data/menu2', [MasterDataController::class, 'createMenu2Item']);
     Route::put('/master-data/menu2/{id}', [MasterDataController::class, 'updateMenu2Item']);
+    Route::delete('/master-data/menu2/{id}', [MasterDataController::class, 'destroyMenu2Item']);
+    Route::post('/master-data/menu2/bulk-delete', [MasterDataController::class, 'bulkDestroyMenu2Item']);
+    Route::post('/master-data/menu2/delete-all', [MasterDataController::class, 'destroyAllMenu2Items']);
+
     Route::post('/master-data/ingredient', [MasterDataController::class, 'createIngredient']);
     Route::put('/master-data/ingredient/{id}', [MasterDataController::class, 'updateIngredient']);
+    Route::delete('/master-data/ingredient/{id}', [MasterDataController::class, 'destroyIngredient']);
+    Route::post('/master-data/ingredient/bulk-delete', [MasterDataController::class, 'bulkDestroyIngredient']);
+    Route::post('/master-data/ingredient/delete-all', [MasterDataController::class, 'destroyAllIngredients']);
+
+    Route::post('/master-data/menu1/nominal', [MasterDataController::class, 'createMenu1Nominal']);
+    Route::put('/master-data/menu1/nominal/{id}', [MasterDataController::class, 'updateMenu1Nominal']);
+    Route::delete('/master-data/menu1/nominal/{id}', [MasterDataController::class, 'destroyMenu1Nominal']);
+    Route::post('/master-data/menu1/qty', [MasterDataController::class, 'createMenu1Qty']);
+    Route::put('/master-data/menu1/qty/{id}', [MasterDataController::class, 'updateMenu1Qty']);
+    Route::delete('/master-data/menu1/qty/{id}', [MasterDataController::class, 'destroyMenu1Qty']);
+    Route::post('/master-data/menu1/delete-all', [MasterDataController::class, 'destroyAllMenu1']);
+
+    Route::post('/master-data/resep/batch', [MasterDataController::class, 'createBatch']);
+    Route::put('/master-data/resep/batch/{id}', [MasterDataController::class, 'updateBatch']);
+    Route::delete('/master-data/resep/batch/{id}', [MasterDataController::class, 'destroyBatch']);
+    Route::post('/master-data/resep/batch/delete-all', [MasterDataController::class, 'destroyAllBatches']);
+
+    Route::post('/master-data/resep/mapping', [MasterDataController::class, 'createMapping']);
+    Route::put('/master-data/resep/mapping/{id}', [MasterDataController::class, 'updateMapping']);
+    Route::delete('/master-data/resep/mapping/{id}', [MasterDataController::class, 'destroyMapping']);
+    Route::post('/master-data/resep/mapping/bulk-delete', [MasterDataController::class, 'bulkDestroyMapping']);
+    Route::post('/master-data/resep/mapping/delete-all', [MasterDataController::class, 'destroyAllMappings']);
+
     Route::post('/master-data/import', [MasterDataController::class, 'importMasterData']);
 });
 

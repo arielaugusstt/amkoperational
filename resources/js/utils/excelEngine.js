@@ -202,7 +202,7 @@ export function parseExcelFile(file) {
     });
 }
 
-export function exportComprehensiveReport(summary, standsProgress, tanggal) {
+export function exportComprehensiveReport(summary, standsProgress, tanggal, auditData = []) {
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: Rekap_Harian
@@ -225,6 +225,39 @@ export function exportComprehensiveReport(summary, standsProgress, tanggal) {
     const ws1 = XLSX.utils.json_to_sheet(rekapData);
     XLSX.utils.book_append_sheet(wb, ws1, 'Rekap_Operasional');
 
+    // Sheet 2: Audit_Reverse_Resep
+    if (auditData && auditData.length > 0) {
+        const auditRows = auditData.map(a => ({
+            Kode_Bahan: a.kode_bahan,
+            Nama_Bahan_Baku: a.nama_bahan_baku,
+            Satuan: a.satuan,
+            Pemakaian_Teoritis_Menu2: a.teoritis,
+            Pemakaian_Aktual_Menu3: a.aktual,
+            Selisih_Aktual_Min_Teoritis: a.selisih,
+            Deviasi_Persen: a.deviasi_percent + '%',
+            Status_Audit: a.status,
+        }));
+        const ws2 = XLSX.utils.json_to_sheet(auditRows);
+        XLSX.utils.book_append_sheet(wb, ws2, 'Audit_Reverse_Resep');
+    }
+
     XLSX.writeFile(wb, `Laporan_Operasional_AMK_${tanggal}.xlsx`);
+}
+
+export function exportAuditReport(auditData, tanggal, standNama = 'Semua Stand') {
+    const wb = XLSX.utils.book_new();
+    const rows = (auditData || []).map(a => ({
+        Kode_Bahan: a.kode_bahan,
+        Nama_Bahan_Baku: a.nama_bahan_baku,
+        Satuan: a.satuan,
+        Pemakaian_Teoritis_Menu2: a.teoritis,
+        Pemakaian_Aktual_Menu3: a.aktual,
+        Selisih: a.selisih,
+        Deviasi_Persen: a.deviasi_percent + '%',
+        Status_Audit: a.status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, 'Audit_Reverse_Resep');
+    XLSX.writeFile(wb, `Audit_Reverse_Resep_${tanggal}_${standNama.replace(/\s+/g, '_')}.xlsx`);
 }
 
