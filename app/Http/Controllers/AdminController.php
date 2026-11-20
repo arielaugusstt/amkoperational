@@ -595,6 +595,8 @@ class AdminController extends Controller
                 'kelompok_menu' => $m->kelompok_menu,
                 'qty' => 0,
                 'omzet' => 0,
+                'by_outlet_map' => [],
+                'by_outlet' => [],
             ];
         }
 
@@ -605,6 +607,7 @@ class AdminController extends Controller
             $stId = $sale->stand_id;
             $stObj = $outletsById->get($stId);
             $stCode = $stObj ? $stObj->kode_stand : '-';
+            $stName = $stObj ? $stObj->nama_stand : '-';
 
             foreach (($sale->items_sold ?? []) as $it) {
                 $mId = (int)($it['menu_id'] ?? $it['menu2_item_id'] ?? 0);
@@ -615,6 +618,17 @@ class AdminController extends Controller
                 if (isset($menuRankingMap[$mId])) {
                     $menuRankingMap[$mId]['qty'] += $qty;
                     $menuRankingMap[$mId]['omzet'] += $sub;
+                    if (!isset($menuRankingMap[$mId]['by_outlet_map'][$stId])) {
+                        $menuRankingMap[$mId]['by_outlet_map'][$stId] = [
+                            'stand_id' => $stId,
+                            'kode_stand' => $stCode,
+                            'nama_stand' => $stName,
+                            'qty' => 0,
+                            'omzet' => 0,
+                        ];
+                    }
+                    $menuRankingMap[$mId]['by_outlet_map'][$stId]['qty'] += $qty;
+                    $menuRankingMap[$mId]['by_outlet_map'][$stId]['omzet'] += $sub;
                 }
                 if (!isset($productOutletAgg[$stId][$mId])) {
                     $productOutletAgg[$stId][$mId] = [
@@ -642,6 +656,14 @@ class AdminController extends Controller
                 }
             }
         }
+
+        foreach ($menuRankingMap as &$mRow) {
+            $outList = array_values($mRow['by_outlet_map']);
+            usort($outList, fn ($a, $b) => $b['qty'] <=> $a['qty']);
+            $mRow['by_outlet'] = $outList;
+            unset($mRow['by_outlet_map']);
+        }
+        unset($mRow);
 
         $productOutletMatrix = [];
         foreach ($outlets as $st) {

@@ -25,6 +25,12 @@ export default function BiPivotCenter({ stands = [], tanggal }) {
     // Section 1: 5 Analytic Panels Switcher
     const [activeAnalyticPanel, setActiveAnalyticPanel] = useState('lini'); // 'lini', 'menu', 'finance', 'people', 'stock'
     const [menuGroupFilter, setMenuGroupFilter] = useState('all');
+    const [variantFlavorFilter, setVariantFlavorFilter] = useState('all');
+    const [specificMenuId, setSpecificMenuId] = useState('all');
+    const [variantSearch, setVariantSearch] = useState('');
+    const [variantSoldStatus, setVariantSoldStatus] = useState('all'); // 'all', 'sold', 'unsold'
+    const [variantSortBy, setVariantSortBy] = useState('qty_desc'); // 'sort_order', 'qty_desc', 'qty_asc', 'omzet_desc', 'omzet_asc'
+    const [expandedMenuIds, setExpandedMenuIds] = useState([]);
     const [previewProof, setPreviewProof] = useState(null);
 
     // Section 2: 8 Pivot Matrix Tabs Switcher
@@ -77,18 +83,104 @@ export default function BiPivotCenter({ stands = [], tanggal }) {
     const fmtNum = (n) => Number(n || 0).toLocaleString('id-ID');
 
     // Filtered & Ranked Menus for Panel 2
-    const { topMenus, bottomMenus } = useMemo(() => {
-        let list = [...(menuVariants.all_menus_ranked || [])];
+    const { topMenus, bottomMenus, filteredAllVariants, filteredTotals, grandTotalMenuQty } = useMemo(() => {
+        const allList = [...(menuVariants.all_menus_ranked || [])];
+        const totalQtyAll = allList.reduce((acc, m) => acc + Number(m.qty || 0), 0);
+
+        let groupList = [...allList];
         if (menuGroupFilter !== 'all') {
-            list = list.filter(m => m.menu_group === menuGroupFilter);
+            groupList = groupList.filter(m => m.menu_group === menuGroupFilter);
         }
-        const sortedDesc = [...list].sort((a, b) => b.qty - a.qty || b.omzet - a.omzet);
-        const sortedAsc = [...list].sort((a, b) => a.qty - b.qty || a.omzet - b.omzet);
+        const sortedDesc = [...groupList].sort((a, b) => b.qty - a.qty || b.omzet - a.omzet);
+        const sortedAsc = [...groupList].sort((a, b) => a.qty - b.qty || a.omzet - b.omzet);
+
+        // Detailed Per-Variant & Per-Item Filter across all 54 menus
+        let detailed = [...groupList];
+
+        if (specificMenuId !== 'all') {
+            detailed = detailed.filter(m => String(m.menu_id) === String(specificMenuId));
+        }
+
+        if (variantFlavorFilter !== 'all') {
+            detailed = detailed.filter(m => {
+                const nm = (m.name || '').toLowerCase();
+                if (variantFlavorFilter === 'ori_murni') {
+                    return ['amk', 'amk ori', 'amk jumbo', 'amk premium', 'amk ori premium'].includes(nm);
+                }
+                if (variantFlavorFilter === 'peach') return nm.includes('peach') || nm.includes('mp ') || nm.includes('pk ');
+                if (variantFlavorFilter === 'moca') return nm.includes('moca') || nm.includes('mp ') || nm.includes('mk ');
+                if (variantFlavorFilter === 'kiwi') return nm.includes('kiwi') || nm.includes('mk ') || nm.includes('pk ');
+                if (variantFlavorFilter === 'blend_2in1') {
+                    return nm.includes('moca peach') || nm.includes('moca kiwi') || nm.includes('peach kiwi') || nm.includes('mp ') || nm.includes('mk ') || nm.includes('pk ');
+                }
+                if (variantFlavorFilter === 'cream') return nm.includes('cream');
+                if (variantFlavorFilter === 'oreo') return nm.includes('oreo');
+                if (variantFlavorFilter === 'coffe') return nm.includes('coffe');
+                if (variantFlavorFilter === 'fruit_powder') return nm.includes('lime') || nm.includes('orange') || nm.includes('guava');
+                if (variantFlavorFilter === 'amk_tea') return nm.includes('tea') || nm.includes('lite');
+                if (variantFlavorFilter === 'amkopi') return m.menu_group === 'amkopi';
+                if (variantFlavorFilter === 'kurma') return m.menu_group === 'amk_kurma';
+                if (variantFlavorFilter === 'mineral') return m.menu_group === 'kemasan';
+                return true;
+            });
+        }
+
+        if (variantSearch.trim() !== '') {
+            const q = variantSearch.trim().toLowerCase();
+            detailed = detailed.filter(m =>
+                (m.name || '').toLowerCase().includes(q) ||
+                String(m.sort_order).includes(q) ||
+                (m.kelompok_menu || '').toLowerCase().includes(q)
+            );
+        }
+
+        if (variantSoldStatus === 'sold') {
+            detailed = detailed.filter(m => Number(m.qty || 0) > 0);
+        } else if (variantSoldStatus === 'unsold') {
+            detailed = detailed.filter(m => Number(m.qty || 0) === 0);
+        }
+
+        if (variantSortBy === 'sort_order') {
+            detailed.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        } else if (variantSortBy === 'qty_desc') {
+            detailed.sort((a, b) => b.qty - a.qty || b.omzet - a.omzet);
+        } else if (variantSortBy === 'qty_asc') {
+            detailed.sort((a, b) => a.qty - b.qty || a.omzet - b.omzet);
+        } else if (variantSortBy === 'omzet_desc') {
+            detailed.sort((a, b) => b.omzet - a.omzet || b.qty - a.qty);
+        } else if (variantSortBy === 'omzet_asc') {
+            detailed.sort((a, b) => a.omzet - b.omzet || a.qty - b.qty);
+        }
+
+        const totQtyFiltered = detailed.reduce((acc, m) => acc + Number(m.qty || 0), 0);
+        const totOmzetFiltered = detailed.reduce((acc, m) => acc + Number(m.omzet || 0), 0);
+
         return {
             topMenus: sortedDesc.slice(0, 10),
             bottomMenus: sortedAsc.slice(0, 10),
+            filteredAllVariants: detailed,
+            filteredTotals: {
+                count: detailed.length,
+                qty: totQtyFiltered,
+                omzet: totOmzetFiltered,
+            },
+            grandTotalMenuQty: totalQtyAll,
         };
-    }, [menuVariants.all_menus_ranked, menuGroupFilter]);
+    }, [
+        menuVariants.all_menus_ranked,
+        menuGroupFilter,
+        specificMenuId,
+        variantFlavorFilter,
+        variantSearch,
+        variantSoldStatus,
+        variantSortBy,
+    ]);
+
+    const toggleExpandMenu = (menuId) => {
+        setExpandedMenuIds(prev =>
+            prev.includes(menuId) ? prev.filter(id => id !== menuId) : [...prev, menuId]
+        );
+    };
 
     // Export Handlers
     const handleExportOms = async () => {
@@ -408,6 +500,248 @@ export default function BiPivotCenter({ stands = [], tanggal }) {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* EKSPLORASI & FILTER LENGKAP PER ITEM / VARIAN (SELURUH 54 MENU) */}
+                            <div className="rounded-3xl border border-indigo-200 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h4 className="text-xs sm:text-sm font-black uppercase tracking-wider text-indigo-950">
+                                            Eksplorasi & Filter Penjualan Lengkap Per Item / Varian (Seluruh 54 Menu)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500 font-medium">
+                                            Filter per rasa/varian, pilih spesifik per item menu, lihat total terjual masing-masing varian, dan klik baris item untuk melihat rincian penjualan di tiap outlet
+                                        </p>
+                                    </div>
+
+                                    {/* Summary Badges of Filtered Variant/Items */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="rounded-xl bg-indigo-50 border border-indigo-200 px-3 py-1.5 text-right">
+                                            <span className="text-[9px] font-black uppercase text-indigo-600 block">Item Terfilter</span>
+                                            <span className="text-xs font-black font-mono text-indigo-950">{filteredTotals?.count || 0} Varian</span>
+                                        </div>
+                                        <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-right">
+                                            <span className="text-[9px] font-black uppercase text-emerald-700 block">Total Qty Terjual</span>
+                                            <span className="text-xs font-black font-mono text-emerald-950">{fmtNum(filteredTotals?.qty || 0)} pcs</span>
+                                        </div>
+                                        <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-1.5 text-right">
+                                            <span className="text-[9px] font-black uppercase text-amber-700 block">Total Omzet Varian</span>
+                                            <span className="text-xs font-black font-mono text-amber-950">{formatRupiah(filteredTotals?.omzet || 0)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Pill Filter Rasa / Varian */}
+                                <div className="space-y-1.5">
+                                    <span className="text-[10px] font-black uppercase text-slate-400 block">
+                                        Filter Cepat Rasa / Karakter Varian:
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {[
+                                            { id: 'all', label: 'Semua Varian (54)' },
+                                            { id: 'ori_murni', label: 'AMK Original / Murni' },
+                                            { id: 'peach', label: 'Varian Peach' },
+                                            { id: 'moca', label: 'Varian Moca' },
+                                            { id: 'kiwi', label: 'Varian Kiwi' },
+                                            { id: 'blend_2in1', label: 'Blend 2-in-1 (MP / MK / PK)' },
+                                            { id: 'cream', label: 'Varian Cream' },
+                                            { id: 'oreo', label: 'Varian Oreo' },
+                                            { id: 'coffe', label: 'Varian Coffe' },
+                                            { id: 'fruit_powder', label: 'Lime / Orange / Guava' },
+                                            { id: 'amk_tea', label: 'AMK Tea & Lite' },
+                                            { id: 'amkopi', label: 'Varian AMKopi' },
+                                            { id: 'kurma', label: 'AMK Kurma' },
+                                            { id: 'mineral', label: 'Le Minerale' },
+                                        ].map(vf => (
+                                            <button
+                                                key={vf.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setVariantFlavorFilter(vf.id);
+                                                    setSpecificMenuId('all');
+                                                }}
+                                                className={`rounded-xl px-2.5 py-1 text-[11px] font-bold transition cursor-pointer ${variantFlavorFilter === vf.id ? 'bg-indigo-600 text-white shadow-xs' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                                            >
+                                                {vf.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Detailed Controls: Search, Specific Item Dropdown, Sold Status, Sort Order */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                                            Cari Nama Item / Varian
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={variantSearch}
+                                            onChange={(e) => setVariantSearch(e.target.value)}
+                                            placeholder="Ketik misal: Peach Cream, Oreo, Jumbo..."
+                                            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                                            Pilih Spesifik 1 Item Menu
+                                        </label>
+                                        <select
+                                            value={specificMenuId}
+                                            onChange={(e) => setSpecificMenuId(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                                        >
+                                            <option value="all">Semua Item Menu (54 Item)</option>
+                                            {[...(menuVariants.all_menus_ranked || [])]
+                                                .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+                                                .map(m => (
+                                                    <option key={m.menu_id} value={m.menu_id}>
+                                                        #{m.sort_order} - {m.name} ({fmtNum(m.qty)} pcs)
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                                            Status Penjualan
+                                        </label>
+                                        <select
+                                            value={variantSoldStatus}
+                                            onChange={(e) => setVariantSoldStatus(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                                        >
+                                            <option value="all">Semua Item (Terjual & Belum)</option>
+                                            <option value="sold">Hanya yang Terjual (&gt; 0 pcs)</option>
+                                            <option value="unsold">Belum Terjual (0 pcs)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">
+                                            Urutkan Daftar
+                                        </label>
+                                        <select
+                                            value={variantSortBy}
+                                            onChange={(e) => setVariantSortBy(e.target.value)}
+                                            className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-none"
+                                        >
+                                            <option value="qty_desc">Qty Terjual Tertinggi &rarr; Terendah</option>
+                                            <option value="qty_asc">Qty Terjual Terendah &rarr; Tertinggi</option>
+                                            <option value="omzet_desc">Omzet Rupiah Tertinggi &rarr; Terendah</option>
+                                            <option value="omzet_asc">Omzet Rupiah Terendah &rarr; Tertinggi</option>
+                                            <option value="sort_order">Urutan Baku Menu (#1 s/d #54)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Complete All-Variants Table with Per-Outlet Expandable Breakdown */}
+                                <div className="overflow-x-auto rounded-2xl border border-slate-200 max-h-[540px] overflow-y-auto">
+                                    <table className="w-full text-left text-xs border-collapse">
+                                        <thead className="sticky top-0 z-10 bg-slate-100 text-[10px] uppercase font-black text-slate-600 border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-3.5 py-2.5 w-14">No</th>
+                                                <th className="px-3.5 py-2.5">Nama Item / Varian Menu</th>
+                                                <th className="px-3.5 py-2.5">Kelompok Menu</th>
+                                                <th className="px-3.5 py-2.5 text-right">Qty Terjual</th>
+                                                <th className="px-3.5 py-2.5 text-right">% Porsi Qty</th>
+                                                <th className="px-3.5 py-2.5 text-right">Total Omzet (Rp)</th>
+                                                <th className="px-3.5 py-2.5 text-center">Sebaran Outlet</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                                            {filteredAllVariants.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                                                        Tidak ada varian menu yang sesuai dengan filter di atas.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                filteredAllVariants.map(item => {
+                                                    const isExpanded = expandedMenuIds.includes(item.menu_id) || specificMenuId !== 'all';
+                                                    const sharePct = grandTotalMenuQty > 0
+                                                        ? ((Number(item.qty || 0) / grandTotalMenuQty) * 100).toFixed(1)
+                                                        : '0.0';
+                                                    const outletBreakdown = item.by_outlet || [];
+
+                                                    return (
+                                                        <React.Fragment key={item.menu_id}>
+                                                            <tr
+                                                                onClick={() => toggleExpandMenu(item.menu_id)}
+                                                                className={`cursor-pointer transition ${item.qty > 0 ? 'hover:bg-indigo-50/40' : 'opacity-75 hover:bg-slate-50'}`}
+                                                            >
+                                                                <td className="px-3.5 py-2.5 font-mono font-bold text-slate-400">
+                                                                    #{item.sort_order}
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5 font-black text-slate-900">
+                                                                    {item.name}
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5">
+                                                                    <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700">
+                                                                        {item.kelompok_menu}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5 text-right font-mono font-black text-slate-900">
+                                                                    {fmtNum(item.qty)} pcs
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5 text-right font-mono text-indigo-700 font-bold">
+                                                                    {sharePct}%
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5 text-right font-mono font-black text-emerald-800">
+                                                                    {formatRupiah(item.omzet)}
+                                                                </td>
+                                                                <td className="px-3.5 py-2.5 text-center">
+                                                                    <button
+                                                                        type="button"
+                                                                        className="rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-800 hover:bg-indigo-100"
+                                                                    >
+                                                                        {outletBreakdown.length} Outlet {isExpanded ? '▲' : '▼'}
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+
+                                                            {isExpanded && (
+                                                                <tr className="bg-indigo-50/30">
+                                                                    <td colSpan={7} className="px-4 py-3 border-b border-indigo-100">
+                                                                        <div className="space-y-2">
+                                                                            <span className="text-[10px] font-black uppercase text-indigo-900 block">
+                                                                                Rincian Penjualan #{item.sort_order} {item.name} per Outlet:
+                                                                            </span>
+                                                                            {outletBreakdown.length === 0 ? (
+                                                                                <span className="text-xs text-slate-400 italic block">
+                                                                                    Belum ada penjualan tercatat di outlet mana pun pada periode ini.
+                                                                                </span>
+                                                                            ) : (
+                                                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                                                                                    {outletBreakdown.map(ob => (
+                                                                                        <div
+                                                                                            key={ob.stand_id}
+                                                                                            className="rounded-xl border border-indigo-200/80 bg-white p-2.5 flex items-center justify-between"
+                                                                                        >
+                                                                                            <div>
+                                                                                                <span className="font-black text-slate-900 text-xs block">{ob.kode_stand}</span>
+                                                                                                <span className="text-[10px] text-slate-400 truncate block max-w-[90px]">{ob.nama_stand}</span>
+                                                                                            </div>
+                                                                                            <div className="text-right font-mono">
+                                                                                                <span className="font-black text-indigo-900 text-xs block">{fmtNum(ob.qty)} pcs</span>
+                                                                                                <span className="text-[10px] text-emerald-700 font-bold">{formatRupiah(ob.omzet)}</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            )}
+                                                        </React.Fragment>
+                                                    );
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
 
