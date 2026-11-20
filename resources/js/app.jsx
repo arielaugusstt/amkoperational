@@ -11,6 +11,7 @@ import GeneratorWA from './pages/admin/GeneratorWA';
 import ReverseAnalytic from './pages/admin/ReverseAnalytic';
 import StockOpnameApproval from './pages/admin/StockOpnameApproval';
 import MasterDataExcel from './pages/admin/MasterDataExcel';
+import BiPivotCenter from './pages/admin/BiPivotCenter';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -165,6 +166,13 @@ function App() {
                         tanggal={tanggal}
                         setTanggal={setTanggal}
                         onNavigate={(tab) => setActiveTab(tab)}
+                    />
+                )}
+
+                {activeTab === 'admin_bi' && (
+                    <BiPivotCenter
+                        stands={stands}
+                        tanggal={tanggal}
                     />
                 )}
 

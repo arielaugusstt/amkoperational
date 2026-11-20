@@ -286,7 +286,18 @@ export default function AdminDashboard({ tanggal, setTanggal, onNavigate }) {
             </div>
 
             {/* Quick Actions Bar */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div
+                    onClick={() => onNavigate('admin_bi')}
+                    className="cursor-pointer rounded-2xl border border-amber-300 bg-amber-50/70 p-4 hover:border-amber-600 hover:shadow-md transition flex items-center justify-between"
+                >
+                    <div>
+                        <h4 className="text-xs font-black text-amber-950 uppercase">BI & Pivot Center (OMS & PRES)</h4>
+                        <p className="text-[11px] text-amber-800">8 Matriks Pivot Kalender & Export OMS/PRES</p>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-amber-600" />
+                </div>
+
                 <div
                     onClick={() => onNavigate('admin_wa')}
                     className="cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 hover:border-amber-500 hover:shadow-md transition flex items-center justify-between"

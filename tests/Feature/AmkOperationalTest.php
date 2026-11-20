@@ -164,6 +164,16 @@ class AmkOperationalTest extends TestCase
         $revRes = $this->actingAs($admin)->getJson('/api/admin/reverse-analytic?stand_id=all&start_date=2026-11-12&end_date=2026-11-12');
         $revRes->assertStatus(200);
         $revRes->assertJsonStructure(['table1_batch_needs', 'table2_audit_comparison']);
+
+        $biRes = $this->actingAs($admin)->getJson('/api/admin/bi-analytics?month=2026-11&stand_id=all');
+        $biRes->assertStatus(200);
+        $biRes->assertJsonStructure([
+            'month',
+            'days_in_month',
+            'calendar_days',
+            'analytics' => ['lini_omzet', 'menu_variants', 'finance_audit', 'people_analytics', 'stock_health'],
+            'pivots' => ['outlets', 'spg'],
+        ]);
     }
 
     public function test_delete_operational_data_dev_mode(): void

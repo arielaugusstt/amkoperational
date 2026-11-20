@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Coffee, LogOut, LayoutDashboard, FileText, FlaskConical, CheckSquare, Database, KeyRound, X } from 'lucide-react';
+import { Coffee, LogOut, LayoutDashboard, FileText, FlaskConical, CheckSquare, Database, KeyRound, X, BarChart3 } from 'lucide-react';
 
 export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
     const [showPwdModal, setShowPwdModal] = useState(false);
@@ -99,6 +99,13 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                                 <span>Dashboard</span>
                             </button>
                             <button
+                                onClick={() => setActiveTab('admin_bi')}
+                                className={`flex items-center space-x-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${activeTab === 'admin_bi' ? 'bg-amber-50 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}
+                            >
+                                <BarChart3 className="h-4 w-4" />
+                                <span>BI & Pivot Center</span>
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('admin_wa')}
                                 className={`flex items-center space-x-1.5 rounded-lg px-3 py-2 text-xs font-bold transition ${activeTab === 'admin_wa' ? 'bg-amber-50 text-amber-700' : 'text-slate-600 hover:bg-slate-100'}`}
                             >
@@ -170,6 +177,12 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab }) {
                             className={`whitespace-nowrap px-3 py-1.5 rounded-lg transition ${activeTab === 'admin_dashboard' ? 'bg-amber-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
                         >
                             Dashboard
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('admin_bi')}
+                            className={`whitespace-nowrap px-3 py-1.5 rounded-lg transition ${activeTab === 'admin_bi' ? 'bg-amber-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}
+                        >
+                            BI & Pivot Center
                         </button>
                         <button
                             onClick={() => setActiveTab('admin_wa')}

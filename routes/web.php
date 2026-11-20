@@ -29,6 +29,7 @@ Route::prefix('api')->group(function () {
 
     // Superadmin Routes
     Route::get('/admin/dashboard-stats', [AdminController::class, 'dashboardStats']);
+    Route::get('/admin/bi-analytics', [AdminController::class, 'biAnalytics']);
     Route::get('/admin/wa-text', [AdminController::class, 'waText']);
     Route::get('/admin/reverse-analytic', [AdminController::class, 'reverseAnalytic']);
     Route::post('/admin/update-recipe-param', [AdminController::class, 'updateRecipeParam']);
