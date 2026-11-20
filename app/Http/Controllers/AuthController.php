@@ -67,5 +67,48 @@ class AuthController extends Controller
             'message' => 'Logout berhasil.',
         ]);
     }
+
+    public function changePassword(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || $user->role !== 'superadmin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya Superadmin yang dapat mengubah password ini.',
+            ], 403);
+        }
+
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:4',
+            'new_password_confirmation' => 'required|same:new_password',
+        ], [
+            'new_password.min' => 'Password baru minimal 4 karakter.',
+            'new_password_confirmation.same' => 'Konfirmasi password baru tidak cocok.',
+        ]);
+
+        $currentPassword = trim($request->input('current_password'));
+        $newPassword = trim($request->input('new_password'));
+
+        $validCurrent = Hash::check($currentPassword, $user->password)
+            || ($user->pin_plain && $user->pin_plain === $currentPassword);
+
+        if (!$validCurrent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Password lama yang Anda masukkan salah.',
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($newPassword),
+            'pin_plain' => $newPassword,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password Superadmin berhasil diperbarui!',
+        ]);
+    }
 }
 

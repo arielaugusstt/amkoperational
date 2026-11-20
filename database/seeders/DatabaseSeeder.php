@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Protected Users / Auth (Superadmin)
-        User::updateOrCreate(
+        // 1. Protected Users / Auth (Superadmin) — use firstOrCreate to preserve custom changed password
+        User::firstOrCreate(
             ['username' => 'admin'],
             [
                 'id_spg' => 'ADM-01',

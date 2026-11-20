@@ -27,7 +27,7 @@ function Backdrop() {
 }
 
 /* ---------- logo: huruf "MATA" membesar bergantian seperti bernapas ---------- */
-function Logo({ className = "", loop = false, delay = 0.6 }) {
+function Logo({ className = "", loop = false, delay = 0.15 }) {
   const reduce = useReducedMotion();
   return (
     <div
@@ -42,10 +42,10 @@ function Logo({ className = "", loop = false, delay = 0.6 }) {
             className="inline-block origin-bottom"
             animate={reduce ? undefined : { scale: [1, 1.4, 1], y: [0, -2, 0] }}
             transition={{
-              duration: 1.5,
-              delay: delay + i * 0.14,
+              duration: loop ? 1.5 : 0.7,
+              delay: delay + i * (loop ? 0.14 : 0.08),
               ease: "easeInOut",
-              repeat: loop ? Infinity : 1,
+              repeat: loop ? Infinity : 0,
               repeatDelay: loop ? 4 : 0,
             }}
           >
@@ -126,7 +126,7 @@ export default function LoginScreen({ onLogin, onLoginSuccess }) {
 
   useEffect(() => {
     if (phase !== "splash") return;
-    const t = setTimeout(() => setPhase("main"), 3600);
+    const t = setTimeout(() => setPhase("main"), 1300);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -176,7 +176,7 @@ export default function LoginScreen({ onLogin, onLoginSuccess }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
-              transition={{ duration: 0.9 }}
+              transition={{ duration: 0.4 }}
             >
               <Logo className="text-[44px]" />
             </motion.div>

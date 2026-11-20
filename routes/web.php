@@ -39,6 +39,7 @@ Route::prefix('api')->group(function () {
 
     Route::get('/admin/settings', [AdminController::class, 'getSettings']);
     Route::post('/admin/settings', [AdminController::class, 'updateSettings']);
+    Route::post('/admin/change-password', [AuthController::class, 'changePassword']);
     Route::post('/admin/delete-operational-data', [AdminController::class, 'deleteOperationalData']);
 
     // Master Data Routes
