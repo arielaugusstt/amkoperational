@@ -9,18 +9,21 @@ const css = `
 .font-serif-i{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
 @keyframes drift-a{from{transform:translate(-8%,-6%) scale(1)}to{transform:translate(10%,8%) scale(1.25)}}
 @keyframes drift-b{from{transform:translate(8%,6%) scale(1.1)}to{transform:translate(-10%,-8%) scale(.9)}}
+@keyframes drift-c{from{transform:translate(-6%,10%) scale(1.05)}to{transform:translate(12%,-10%) scale(1.3)}}
 .blob-a{animation:drift-a 16s ease-in-out infinite alternate}
 .blob-b{animation:drift-b 20s ease-in-out infinite alternate}
-@media (prefers-reduced-motion:reduce){.blob-a,.blob-b{animation:none}}
+.blob-c{animation:drift-c 24s ease-in-out infinite alternate}
+@media (prefers-reduced-motion:reduce){.blob-a,.blob-b,.blob-c{animation:none}}
 `;
 
-/* ---------- latar hijau blur ---------- */
+/* ---------- latar hijau blur full-screen (mobile & desktop PC) ---------- */
 function Backdrop() {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-[#070b04]">
-      <div className="blob-a absolute -left-1/4 -top-1/4 h-[70%] w-[90%] rounded-full bg-[#6b7a1c] opacity-60 blur-[90px]" />
-      <div className="blob-b absolute -right-1/4 top-[8%] h-[55%] w-[85%] rounded-full bg-[#3f6a14] opacity-70 blur-[90px]" />
-      <div className="blob-a absolute left-[5%] top-[35%] h-[40%] w-[70%] rounded-full bg-[#2a4a0e] opacity-70 blur-[80px]" />
+    <div className="fixed inset-0 pointer-events-none overflow-hidden bg-[#070b04]">
+      <div className="blob-a absolute -left-1/4 -top-1/4 h-[75%] w-[95%] md:w-[65%] rounded-full bg-[#6b7a1c] opacity-60 blur-[90px] md:blur-[150px]" />
+      <div className="blob-b absolute -right-1/4 top-[5%] h-[60%] w-[85%] md:w-[60%] rounded-full bg-[#3f6a14] opacity-70 blur-[90px] md:blur-[150px]" />
+      <div className="blob-a absolute left-[5%] md:left-[20%] top-[35%] h-[45%] w-[75%] md:w-[55%] rounded-full bg-[#2a4a0e] opacity-70 blur-[80px] md:blur-[140px]" />
+      <div className="blob-c hidden md:block absolute right-[15%] bottom-[-10%] h-[50%] w-[50%] rounded-full bg-[#536b16] opacity-45 blur-[160px]" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/90" />
     </div>
   );
@@ -58,10 +61,12 @@ function Logo({ className = "", loop = false, delay = 0.15 }) {
   );
 }
 
-/* ---------- gelombang sinus + titik napas ---------- */
-const W = 400, H = 170, MID = 85, AMP = 55, CYCLES = 1.25, PHASE = 0.9 * Math.PI;
-const yAt = (x) => MID - AMP * Math.sin((x / W) * Math.PI * 2 * CYCLES + PHASE);
-const WAVE_D = Array.from({ length: 101 }, (_, i) => {
+/* ---------- gelombang sinus full-bleed (identik di mobile, membentang penuh di PC) ---------- */
+const W = 1200, H = 170, MID = 85, AMP = 55, CYCLES = 1.25, PHASE = 0.9 * Math.PI;
+// Di bagian tengah (x = 400..800), kurva ini 100% identik dengan kurva mobile 0..400,
+// dan di layar lebar (PC) kurva berlanjut mulus ke tepi kiri (0..400) & kanan (800..1200) tanpa terpotong.
+const yAt = (x) => MID - AMP * Math.sin(((x - 400) / 400) * Math.PI * 2 * CYCLES + PHASE);
+const WAVE_D = Array.from({ length: 301 }, (_, i) => {
   const x = i * 4;
   return `${i ? "L" : "M"}${x} ${yAt(x).toFixed(2)}`;
 }).join(" ");
@@ -69,16 +74,20 @@ const WAVE_D = Array.from({ length: 101 }, (_, i) => {
 function Wave() {
   const dot = useRef(null);
   const glow = useRef(null);
+  const outerGlow = useRef(null);
 
   useEffect(() => {
     let raf;
     const t0 = performance.now();
     const tick = (now) => {
       const t = (now - t0) / 1000;
-      const x = W / 2 - 140 * Math.cos((t * Math.PI * 2) / 12); // bolak-balik, 12 dtk per siklus
+      const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+      const travelRadius = isDesktop ? 340 : 140;
+      const x = W / 2 - travelRadius * Math.cos((t * Math.PI * 2) / 12); // bolak-balik, 12 dtk per siklus
       const tr = `translate(${x}px, ${yAt(x)}px)`;
       if (dot.current) dot.current.style.transform = tr;
       if (glow.current) glow.current.style.transform = tr;
+      if (outerGlow.current) outerGlow.current.style.transform = tr;
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -86,8 +95,12 @@ function Wave() {
   }, []);
 
   return (
-    <div className="overflow-hidden" aria-hidden>
-      <svg viewBox={`0 0 ${W} ${H}`} className="-mx-[10%] block w-[120%] overflow-visible">
+    <div className="relative w-screen left-1/2 -translate-x-1/2 overflow-hidden py-2" aria-hidden>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid slice"
+        className="block w-full h-[180px] sm:h-[200px] md:h-[230px] lg:h-[260px] overflow-visible"
+      >
         <motion.path
           d={WAVE_D}
           fill="none"
@@ -98,8 +111,9 @@ function Wave() {
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.8, ease: "easeInOut" }}
         />
+        <circle ref={outerGlow} r="28" fill="white" opacity="0.12" />
         <circle ref={glow} r="16" fill="white" opacity="0.28" />
-        <circle ref={dot} r="6" fill="white" opacity="0.9" />
+        <circle ref={dot} r="6" fill="white" opacity="0.95" />
       </svg>
     </div>
   );
@@ -163,81 +177,83 @@ export default function LoginScreen({ onLogin, onLoginSuccess }) {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full bg-[#070b04]">
-      <div className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden text-white">
-        <style>{css}</style>
-        <Backdrop />
+    <div className="relative min-h-[100dvh] w-full overflow-x-hidden bg-[#070b04] text-white">
+      <style>{css}</style>
+      <Backdrop />
 
-        <AnimatePresence mode="wait">
-          {phase === "splash" ? (
-            <motion.div
-              key="splash"
-              className="relative flex min-h-[100dvh] items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
-              transition={{ duration: 0.4 }}
-            >
-              <Logo className="text-[44px]" />
+      <AnimatePresence mode="wait">
+        {phase === "splash" ? (
+          <motion.div
+            key="splash"
+            className="relative flex min-h-[100dvh] w-full items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
+            transition={{ duration: 0.4 }}
+          >
+            <Logo className="text-[44px] md:text-[56px]" />
+          </motion.div>
+        ) : (
+          <motion.main
+            key="main"
+            className="relative mx-auto flex min-h-[100dvh] w-full max-w-md md:max-w-2xl flex-col justify-between px-6 pb-8 md:pb-12 pt-[max(2.5rem,env(safe-area-inset-top))] md:pt-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.div {...rise(0)}>
+              <Logo className="text-[22px] md:text-[26px]" loop delay={2.2} />
             </motion.div>
-          ) : (
-            <motion.main
-              key="main"
-              className="relative flex min-h-[100dvh] flex-col justify-between px-6 pb-8 pt-[max(2.5rem,env(safe-area-inset-top))]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
+
+            <Wave />
+
+            <motion.p
+              {...rise(2)}
+              className="font-ui mx-auto max-w-[19ch] md:max-w-[24ch] text-center text-[27px] md:text-[34px] font-semibold leading-[1.15] tracking-tight"
             >
-              <motion.div {...rise(0)}>
-                <Logo className="text-[22px]" loop delay={2.2} />
-              </motion.div>
+              Semua ada <span className="font-serif-i text-[1.15em]">waktunya</span>, dan setiap
+              proses punya <span className="font-serif-i text-[1.15em]">musimnya</span> sendiri.
+            </motion.p>
 
-              <Wave />
-
-              <motion.p
-                {...rise(2)}
-                className="font-ui mx-auto max-w-[19ch] text-center text-[27px] font-semibold leading-[1.15] tracking-tight"
+            <motion.form
+              {...rise(3)}
+              onSubmit={submit}
+              className="mx-auto w-full max-w-md space-y-3"
+            >
+              <input
+                className={inputCls}
+                type="text"
+                placeholder="Username"
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+              <input
+                className={inputCls}
+                type="password"
+                placeholder="Password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {error && (
+                <p role="alert" className="font-ui text-center text-sm text-red-300">
+                  {error}
+                </p>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="font-ui w-full rounded-full bg-white py-4 text-[17px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
-                Semua ada <span className="font-serif-i text-[1.15em]">waktunya</span>, dan setiap
-                proses punya <span className="font-serif-i text-[1.15em]">musimnya</span> sendiri.
-              </motion.p>
-
-              <motion.form {...rise(3)} onSubmit={submit} className="space-y-3">
-                <input
-                  className={inputCls}
-                  type="text"
-                  placeholder="Username"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-                <input
-                  className={inputCls}
-                  type="password"
-                  placeholder="Password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                {error && (
-                  <p role="alert" className="font-ui text-center text-sm text-red-300">
-                    {error}
-                  </p>
-                )}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="font-ui w-full rounded-full bg-white py-4 text-[17px] font-semibold text-black transition active:scale-[0.98] disabled:opacity-60"
-                >
-                  {loading ? "Memproses…" : "Masuk"}
-                </button>
-              </motion.form>
-            </motion.main>
-          )}
-        </AnimatePresence>
-      </div>
+                {loading ? "Memproses…" : "Masuk"}
+              </button>
+            </motion.form>
+          </motion.main>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
