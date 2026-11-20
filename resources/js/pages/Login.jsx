@@ -1,146 +1,243 @@
-import React, { useState } from 'react';
-import { Coffee, KeyRound, User, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
-export default function Login({ onLoginSuccess }) {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+/* ---------- gaya tambahan (font + animasi latar) ---------- */
+const css = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600&family=Inter:wght@400;500;600&family=Instrument+Serif:ital@1&display=swap');
+.font-logo{font-family:'Outfit',system-ui,sans-serif}
+.font-ui{font-family:'Inter',system-ui,sans-serif}
+.font-serif-i{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
+@keyframes drift-a{from{transform:translate(-8%,-6%) scale(1)}to{transform:translate(10%,8%) scale(1.25)}}
+@keyframes drift-b{from{transform:translate(8%,6%) scale(1.1)}to{transform:translate(-10%,-8%) scale(.9)}}
+.blob-a{animation:drift-a 16s ease-in-out infinite alternate}
+.blob-b{animation:drift-b 20s ease-in-out infinite alternate}
+@media (prefers-reduced-motion:reduce){.blob-a,.blob-b{animation:none}}
+`;
 
-    const handleSubmit = async (e) => {
-        if (e) e.preventDefault();
-        setError('');
-        setLoading(true);
-
-        try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken || '',
-                },
-                body: JSON.stringify({ username, password }),
-            });
-
-            const data = await res.json();
-            if (data.success && data.user) {
-                onLoginSuccess(data.user);
-            } else {
-                setError(data.message || 'Username atau PIN salah.');
-            }
-        } catch (err) {
-            setError('Gagal menghubungi server. Periksa koneksi internet.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleQuickLogin = (u, p) => {
-        setUsername(u);
-        setPassword(p);
-        setError('');
-    };
-
-    return (
-        <div className="flex min-h-screen flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-gradient-to-b from-neutral-100 via-neutral-50 to-neutral-200 text-neutral-900">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                {/* Brand Header */}
-                <div className="flex justify-center">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-neutral-950 text-white shadow-2xl shadow-black/30 border border-neutral-800">
-                        <Coffee className="h-9 w-9 stroke-[2.5]" />
-                    </div>
-                </div>
-                <h2 className="mt-4 text-center text-2xl sm:text-3xl font-black tracking-tight text-neutral-950 uppercase">
-                    AIR MATA KUCING
-                </h2>
-                <p className="mt-1 text-center text-xs sm:text-sm font-medium text-neutral-600">
-                    Sistem Operasional, Inventori & Reverse Analytic
-                </p>
-            </div>
-
-            <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="rounded-3xl border border-neutral-300/80 bg-white p-6 sm:p-8 shadow-xl shadow-neutral-900/10">
-                    <form className="space-y-4" onSubmit={handleSubmit}>
-                        {error && (
-                            <div className="rounded-xl border border-neutral-900 bg-neutral-100 p-3 text-xs font-bold text-neutral-950 flex items-center space-x-2">
-                                <span className="h-2 w-2 rounded-full bg-neutral-950 inline-block"></span>
-                                <span>{error}</span>
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-800 mb-1">
-                                Username
-                            </label>
-                            <div className="relative">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-500">
-                                    <User className="h-5 w-5" />
-                                </div>
-                                <input
-                                    type="text"
-                                    required
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="Contoh: spg1 atau admin"
-                                    className="w-full rounded-xl border border-neutral-300 pl-11 pr-4 py-3 text-sm font-semibold text-neutral-950 shadow-sm placeholder:text-neutral-400 focus:border-neutral-950 focus:outline-none focus:ring-2 focus:ring-neutral-950/20 transition"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-neutral-800 mb-1">
-                                PIN / Password
-                            </label>
-                            <div className="relative">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-neutral-500">
-                                    <KeyRound className="h-5 w-5" />
-                                </div>
-                                <input
-                                    type="password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Masukkan PIN"
-                                    className="w-full rounded-xl border border-neutral-300 pl-11 pr-4 py-3 text-sm font-semibold text-neutral-950 shadow-sm placeholder:text-neutral-400 focus:border-neutral-950 focus:outline-none focus:ring-2 focus:ring-neutral-950/20 transition"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="mt-2 flex w-full items-center justify-center space-x-2 rounded-xl bg-neutral-950 px-4 py-3.5 text-sm font-black text-white shadow-xl shadow-neutral-950/25 transition hover:bg-neutral-800 active:scale-95 disabled:opacity-60 cursor-pointer"
-                        >
-                            <span>{loading ? 'Memverifikasi...' : 'MASUK SEKARANG'}</span>
-                            <ArrowRight className="h-4 w-4" />
-                        </button>
-                    </form>
-
-                    {/* Quick Demo Credentials for Fast Testing */}
-                    <div className="mt-6 border-t border-neutral-200 pt-5">
-                        <p className="text-center text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2.5">
-                            Akun Superadmin
-                        </p>
-                        <div>
-                            <button
-                                type="button"
-                                onClick={() => handleQuickLogin('admin', 'admin123')}
-                                className="w-full flex flex-col items-center rounded-xl border border-neutral-950 bg-neutral-950 p-2.5 text-center transition hover:bg-neutral-800 active:scale-95 cursor-pointer text-white shadow-sm"
-                            >
-                                <span className="text-xs font-black text-white">Super Admin AMK</span>
-                                <span className="text-[10px] font-medium text-neutral-400">admin / admin123</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="mt-4 text-center text-xs text-neutral-500 font-medium">
-                    &copy; 2026 Air Mata Kucing (AMK). All rights reserved.
-                </p>
-            </div>
-        </div>
-    );
+/* ---------- latar hijau blur ---------- */
+function Backdrop() {
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-[#070b04]">
+      <div className="blob-a absolute -left-1/4 -top-1/4 h-[70%] w-[90%] rounded-full bg-[#6b7a1c] opacity-60 blur-[90px]" />
+      <div className="blob-b absolute -right-1/4 top-[8%] h-[55%] w-[85%] rounded-full bg-[#3f6a14] opacity-70 blur-[90px]" />
+      <div className="blob-a absolute left-[5%] top-[35%] h-[40%] w-[70%] rounded-full bg-[#2a4a0e] opacity-70 blur-[80px]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/35 to-black/90" />
+    </div>
+  );
 }
 
+/* ---------- logo: huruf "MATA" membesar bergantian seperti bernapas ---------- */
+function Logo({ className = "", loop = false, delay = 0.6 }) {
+  const reduce = useReducedMotion();
+  return (
+    <div
+      aria-label="Air Mata Kucing"
+      className={`font-logo text-center font-semibold leading-[0.95] tracking-[0.08em] text-white ${className}`}
+    >
+      <div aria-hidden>
+        AIR{" "}
+        {"MATA".split("").map((c, i) => (
+          <motion.span
+            key={i}
+            className="inline-block origin-bottom"
+            animate={reduce ? undefined : { scale: [1, 1.4, 1], y: [0, -2, 0] }}
+            transition={{
+              duration: 1.5,
+              delay: delay + i * 0.14,
+              ease: "easeInOut",
+              repeat: loop ? Infinity : 1,
+              repeatDelay: loop ? 4 : 0,
+            }}
+          >
+            {c}
+          </motion.span>
+        ))}
+      </div>
+      <div aria-hidden>KUCING</div>
+    </div>
+  );
+}
+
+/* ---------- gelombang sinus + titik napas ---------- */
+const W = 400, H = 170, MID = 85, AMP = 55, CYCLES = 1.25, PHASE = 0.9 * Math.PI;
+const yAt = (x) => MID - AMP * Math.sin((x / W) * Math.PI * 2 * CYCLES + PHASE);
+const WAVE_D = Array.from({ length: 101 }, (_, i) => {
+  const x = i * 4;
+  return `${i ? "L" : "M"}${x} ${yAt(x).toFixed(2)}`;
+}).join(" ");
+
+function Wave() {
+  const dot = useRef(null);
+  const glow = useRef(null);
+
+  useEffect(() => {
+    let raf;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const t = (now - t0) / 1000;
+      const x = W / 2 - 140 * Math.cos((t * Math.PI * 2) / 12); // bolak-balik, 12 dtk per siklus
+      const tr = `translate(${x}px, ${yAt(x)}px)`;
+      if (dot.current) dot.current.style.transform = tr;
+      if (glow.current) glow.current.style.transform = tr;
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return (
+    <div className="overflow-hidden" aria-hidden>
+      <svg viewBox={`0 0 ${W} ${H}`} className="-mx-[10%] block w-[120%] overflow-visible">
+        <motion.path
+          d={WAVE_D}
+          fill="none"
+          stroke="white"
+          strokeWidth="10"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.8, ease: "easeInOut" }}
+        />
+        <circle ref={glow} r="16" fill="white" opacity="0.28" />
+        <circle ref={dot} r="6" fill="white" opacity="0.9" />
+      </svg>
+    </div>
+  );
+}
+
+/* ---------- layar login ---------- */
+const rise = (i) => ({
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay: 0.15 + i * 0.15, duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+});
+
+const inputCls =
+  "font-ui w-full rounded-full border border-white/15 bg-white/10 px-6 py-4 text-[16px] text-white " +
+  "placeholder-white/50 backdrop-blur-md outline-none transition focus:border-white/60 focus:bg-white/15";
+
+export default function LoginScreen({ onLogin, onLoginSuccess }) {
+  const reduce = useReducedMotion();
+  const [phase, setPhase] = useState(reduce ? "main" : "splash");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (phase !== "splash") return;
+    const t = setTimeout(() => setPhase("main"), 3600);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (onLogin) {
+        await onLogin({ username, password });
+      } else {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content");
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-CSRF-TOKEN": csrfToken || "",
+          },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (data.success && data.user) {
+          onLoginSuccess?.(data.user);
+        } else {
+          throw new Error(data.message || "Username atau password salah.");
+        }
+      }
+    } catch (err) {
+      setError(err?.message || "Username atau password salah.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-[100dvh] w-full bg-[#070b04]">
+      <div className="relative mx-auto min-h-[100dvh] w-full max-w-md overflow-hidden text-white">
+        <style>{css}</style>
+        <Backdrop />
+
+        <AnimatePresence mode="wait">
+          {phase === "splash" ? (
+            <motion.div
+              key="splash"
+              className="relative flex min-h-[100dvh] items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
+              transition={{ duration: 0.9 }}
+            >
+              <Logo className="text-[44px]" />
+            </motion.div>
+          ) : (
+            <motion.main
+              key="main"
+              className="relative flex min-h-[100dvh] flex-col justify-between px-6 pb-8 pt-[max(2.5rem,env(safe-area-inset-top))]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.8 }}
+            >
+              <motion.div {...rise(0)}>
+                <Logo className="text-[22px]" loop delay={2.2} />
+              </motion.div>
+
+              <Wave />
+
+              <motion.p
+                {...rise(2)}
+                className="font-ui mx-auto max-w-[19ch] text-center text-[27px] font-semibold leading-[1.15] tracking-tight"
+              >
+                Semua ada <span className="font-serif-i text-[1.15em]">waktunya</span>, dan setiap
+                proses punya <span className="font-serif-i text-[1.15em]">musimnya</span> sendiri.
+              </motion.p>
+
+              <motion.form {...rise(3)} onSubmit={submit} className="space-y-3">
+                <input
+                  className={inputCls}
+                  type="text"
+                  placeholder="Username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+                <input
+                  className={inputCls}
+                  type="password"
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                {error && (
+                  <p role="alert" className="font-ui text-center text-sm text-red-300">
+                    {error}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="font-ui w-full rounded-full bg-white py-4 text-[17px] font-semibold text-black transition active:scale-[0.98] disabled:opacity-60"
+                >
+                  {loading ? "Memproses…" : "Masuk"}
+                </button>
+              </motion.form>
+            </motion.main>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
